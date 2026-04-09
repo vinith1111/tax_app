@@ -1,6 +1,6 @@
 import streamlit as st
 
-st.set_page_config(page_title="SaveTax India", page_icon="💰")
+st.set_page_config(page_title="SaveTaxX", page_icon="💰")
 
 # ---------------- UI STYLE ----------------
 st.markdown("""
@@ -78,7 +78,7 @@ div[data-baseweb="input"] {
 
 # ---------------- HEADER ----------------
 st.markdown("""
-<h2 style='text-align:center;'>💰 SaveTax India</h2>
+<h2 style='text-align:center;'>💰 SaveTaxX</h2>
 <p class='subtext'>Real Salary. No Confusion.</p>
 """, unsafe_allow_html=True)
 
@@ -319,6 +319,6 @@ elif page == "HRA Calculator":
 # ---------------- FOOTER ----------------
 st.markdown("""
 <div class="footer">
-🔒 No data stored • Private & secure • SaveTax India
+🔒 No data stored • Private & secure • SaveTaxX
 </div>
 """, unsafe_allow_html=True)
