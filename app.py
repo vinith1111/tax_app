@@ -16,6 +16,19 @@ STANDARD_DEDUCTION_OLD = 50000
 PROFESSIONAL_TAX = 2400
 
 # ---------------- TAX FUNCTIONS ----------------
+def apply_surcharge(tax, income):
+    if income > 5000000:
+        if income <= 10000000:
+            tax *= 1.10
+        elif income <= 20000000:
+            tax *= 1.15
+        elif income <= 50000000:
+            tax *= 1.25
+        else:
+            tax *= 1.25  # capped in new regime
+    return tax
+
+
 def new_tax(income):
     if income <= 1200000:
         return 0
@@ -31,12 +44,18 @@ def new_tax(income):
     ]
 
     tax = 0
-    for limit, rate in slabs:
-        if income > 0:
-            taxable = min(income, limit)
-            tax += taxable * rate
-            income -= taxable
+    temp_income = income
 
+    for limit, rate in slabs:
+        if temp_income > 0:
+            taxable = min(temp_income, limit)
+            tax += taxable * rate
+            temp_income -= taxable
+
+    # ✅ Apply surcharge automatically
+    tax = apply_surcharge(tax, income)
+
+    # ✅ Add cess
     return tax * 1.04
 
 
@@ -49,11 +68,16 @@ def old_tax(income):
     ]
 
     tax = 0
+    temp_income = income
+
     for limit, rate in slabs:
-        if income > 0:
-            taxable = min(income, limit)
+        if temp_income > 0:
+            taxable = min(temp_income, limit)
             tax += taxable * rate
-            income -= taxable
+            temp_income -= taxable
+
+    # ✅ Apply surcharge
+    tax = apply_surcharge(tax, income)
 
     return tax * 1.04
 
@@ -109,7 +133,7 @@ if page == "📊 Salary Calculator":
         else:
             st.success(f"You get ₹{abs(diff):,.0f} more with Old Regime")
 
-        st.caption("✔ Includes tax, PF, and deductions")
+        st.caption("✔ Includes tax, surcharge (if >50L), PF, and deductions")
 
 
 # ================= PAGE 2 =================
@@ -164,8 +188,8 @@ elif page == "🏠 HRA Calculator":
     hra_received = st.number_input("HRA Received (₹)", min_value=0)
     rent_paid = st.number_input("Rent Paid (₹)", min_value=0)
 
-    metro = st.checkbox(" Do you live in Metro City?")
-    st.caption("✔ Metro cities: Delhi, Mumbai, Chennai, Kolkata (as per current rules)")
+    metro = st.checkbox("Metro City")
+    st.caption("✔ Metro cities: Delhi, Mumbai, Chennai, Kolkata (current rules)")
 
     if salary > 0 and hra_received > 0 and rent_paid > 0:
 
