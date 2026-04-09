@@ -2,6 +2,26 @@ import streamlit as st
 
 st.set_page_config(page_title="SaveTaxX", page_icon="💰")
 
+# ---------------- INR FORMAT ----------------
+def format_inr(amount):
+    s = str(int(amount))
+    if len(s) <= 3:
+        return "₹" + s
+
+    last3 = s[-3:]
+    rest = s[:-3]
+
+    parts = []
+    while len(rest) > 2:
+        parts.insert(0, rest[-2:])
+        rest = rest[:-2]
+
+    if rest:
+        parts.insert(0, rest)
+
+    return "₹" + ",".join(parts + [last3])
+
+
 # ---------------- HEADER ----------------
 st.title("💰 SaveTaxX")
 st.caption("Real Salary. No Confusion.")
@@ -58,7 +78,6 @@ def tax_breakdown(income, regime):
 
     base_tax = tax
 
-    # surcharge
     if original_income > 50000000:
         surcharge_rate = 0.25 if regime == "new" else 0.37
     elif original_income > 20000000:
@@ -71,8 +90,6 @@ def tax_breakdown(income, regime):
         surcharge_rate = 0
 
     surcharge = base_tax * surcharge_rate
-
-    # cess
     cess = (base_tax + surcharge) * 0.04
 
     total = base_tax + surcharge + cess
@@ -132,37 +149,16 @@ def calculate(ctc, section_80c=150000, hra=0, other=0):
 
     gross = ctc - employer_pf
 
-    # NEW
     taxable_new = max(gross - 75000, 0)
     tax_new = new_tax(taxable_new)
     inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
 
-    # OLD
     deductions = 50000 + PROFESSIONAL_TAX + section_80c + hra + other
     taxable_old = max(gross - deductions, 0)
     tax_old = old_tax(taxable_old)
     inhand_old = gross - employee_pf - tax_old - PROFESSIONAL_TAX
 
     return inhand_new, inhand_old, taxable_new, taxable_old
-
-#====================format amount====================
-def format_inr(amount):
-    s = str(int(amount))
-    if len(s) <= 3:
-        return "₹" + s
-
-    last3 = s[-3:]
-    rest = s[:-3]
-
-    parts = []
-    while len(rest) > 2:
-        parts.insert(0, rest[-2:])
-        rest = rest[:-2]
-
-    if rest:
-        parts.insert(0, rest)
-
-    return "₹" + ",".join(parts + [last3])
 
 
 # ================= SALARY =================
@@ -174,18 +170,18 @@ if page == "Salary Calculator":
         new, old, _, _ = calculate(ctc)
 
         st.subheader("💸 Monthly In-Hand")
-        st.success(f"₹{new/12:,.0f}")
+        st.success(format_inr(new/12))
 
         col1, col2 = st.columns(2)
-        col1.metric("New Regime", f"₹{new:,.0f}")
-        col2.metric("Old Regime", f"₹{old:,.0f}")
+        col1.metric("New Regime", format_inr(new))
+        col2.metric("Old Regime", format_inr(old))
 
-        if abs(new > old) < 1:
-            st.info(f"Both regime gives same result")
+        if abs(new - old) < 1:
+            st.info("⚖️ Both regimes give same result")
         elif new > old:
-            st.info(f"New regime better by ₹{new-old:,.0f}")
+            st.info(f"New regime better by {format_inr(new-old)}")
         else:
-            st.info(f"Old regime better by ₹{old-new:,.0f}")
+            st.info(f"Old regime better by {format_inr(old-new)}")
 
 
 # ================= OFFER =================
@@ -201,15 +197,15 @@ elif page == "Offer Comparison":
         new2, _, _, _ = calculate(ctc2)
 
         col1, col2 = st.columns(2)
-        col1.metric("Offer 1 Monthly", f"₹{new1/12:,.0f}")
-        col2.metric("Offer 2 Monthly", f"₹{new2/12:,.0f}")
+        col1.metric("Offer 1 Monthly", format_inr(new1/12))
+        col2.metric("Offer 2 Monthly", format_inr(new2/12))
 
         diff = new2 - new1
 
         if diff > 0:
-            st.success(f"Offer 2 gives ₹{diff/12:,.0f}/month more")
+            st.success(f"Offer 2 gives {format_inr(diff/12)}/month more")
         else:
-            st.success(f"Offer 1 gives ₹{abs(diff)/12:,.0f}/month more")
+            st.success(f"Offer 1 gives {format_inr(abs(diff)/12)}/month more")
 
 
 # ================= TAX OPTIMIZER =================
@@ -234,31 +230,31 @@ elif page == "Tax Optimizer":
         st.subheader("📊 Tax Comparison")
 
         col1, col2 = st.columns(2)
-        col1.metric("New Regime", f"₹{new:,.0f}")
-        col2.metric("Old Regime", f"₹{old:,.0f}")
+        col1.metric("New Regime", format_inr(new))
+        col2.metric("Old Regime", format_inr(old))
 
         diff = abs(new - old)
 
         if new > old:
-            st.success(f"✅ New Regime better by ₹{diff:,.0f}")
+            st.success(f"New Regime better by {format_inr(diff)}")
         else:
-            st.success(f"✅ Old Regime better by ₹{diff:,.0f}")
+            st.success(f"Old Regime better by {format_inr(diff)}")
 
         with st.expander("🔍 View Detailed Breakdown"):
 
             st.markdown("### New Regime")
             b, s, c, t = tax_breakdown(taxable_new, "new")
-            st.write(f"Base Tax: ₹{b:,.0f}")
-            st.write(f"Surcharge: ₹{s:,.0f}")
-            st.write(f"Cess: ₹{c:,.0f}")
-            st.success(f"Total Tax: ₹{t:,.0f}")
+            st.write(f"Base Tax: {format_inr(b)}")
+            st.write(f"Surcharge: {format_inr(s)}")
+            st.write(f"Cess: {format_inr(c)}")
+            st.success(f"Total Tax: {format_inr(t)}")
 
             st.markdown("### Old Regime")
             b, s, c, t = tax_breakdown(taxable_old, "old")
-            st.write(f"Base Tax: ₹{b:,.0f}")
-            st.write(f"Surcharge: ₹{s:,.0f}")
-            st.write(f"Cess: ₹{c:,.0f}")
-            st.success(f"Total Tax: ₹{t:,.0f}")
+            st.write(f"Base Tax: {format_inr(b)}")
+            st.write(f"Surcharge: {format_inr(s)}")
+            st.write(f"Cess: {format_inr(c)}")
+            st.success(f"Total Tax: {format_inr(t)}")
 
         st.caption("Includes surcharge & cess as per latest rules")
 
@@ -283,5 +279,5 @@ elif page == "HRA Calculator":
         exempt = min(hra_received, rent_minus_10, salary_limit)
         taxable = max(hra_received - exempt, 0)
 
-        st.success(f"Exempt HRA: ₹{exempt:,.0f}")
-        st.error(f"Taxable HRA: ₹{taxable:,.0f}")
+        st.success(f"Exempt HRA: {format_inr(exempt)}")
+        st.error(f"Taxable HRA: {format_inr(taxable)}")
