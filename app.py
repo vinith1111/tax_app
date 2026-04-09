@@ -58,7 +58,7 @@ def old_tax(income):
     return tax * 1.04
 
 
-# ---------------- CALCULATION ----------------
+# ---------------- SALARY CALCULATION ----------------
 def calculate(ctc, section_80c=150000, hra=0, other=0):
     basic = ctc * 0.5
     employer_pf = basic * 0.12
@@ -74,7 +74,7 @@ def calculate(ctc, section_80c=150000, hra=0, other=0):
     # OLD REGIME
     deductions_old = (
         STANDARD_DEDUCTION_OLD +
-        PROFESSIONAL_TAX +  # deductible
+        PROFESSIONAL_TAX +
         section_80c +
         hra +
         other
@@ -167,7 +167,8 @@ elif page == "🏠 HRA Calculator":
     metro = st.checkbox("Metro City")
     st.caption("✔ Metro cities: Delhi, Mumbai, Chennai, Kolkata (as per current rules)")
 
-    if salary > 0:
+    if salary > 0 and hra_received > 0 and rent_paid > 0:
+
         percent_salary = 0.5 if metro else 0.4
 
         exemption1 = hra_received
@@ -177,7 +178,16 @@ elif page == "🏠 HRA Calculator":
         hra_exempt = min(exemption1, exemption2, exemption3)
         hra_exempt = max(hra_exempt, 0)
 
-        st.subheader("📊 HRA Result")
+        st.subheader("📊 HRA Breakdown")
+
+        st.write(f"HRA Received: ₹{exemption1:,.0f}")
+        st.write(f"Rent - 10% Salary: ₹{exemption2:,.0f}")
+        st.write(f"{'50%' if metro else '40%'} of Salary: ₹{exemption3:,.0f}")
+
+        st.subheader("✅ Result")
 
         st.success(f"Exempt HRA: ₹{hra_exempt:,.0f}")
         st.write(f"Taxable HRA: ₹{hra_received - hra_exempt:,.0f}")
+
+    else:
+        st.info("Enter salary, HRA, and rent to calculate")
