@@ -64,13 +64,13 @@ div[data-baseweb="input"] {
 </style>
 """, unsafe_allow_html=True)
 
-# spacing fix
+# spacing
 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
 st.markdown("""
 <h2 style='text-align:center;'>💰 SaveTaxX</h2>
-<p class='subtext'>Real Salary. No Confusion.</p>
+<p style='text-align:center; color:#9DA5B4;'>Real Salary. No Confusion.</p>
 """, unsafe_allow_html=True)
 
 # ---------------- SIDEBAR ----------------
@@ -168,9 +168,9 @@ if page == "Salary Calculator":
         new, old = calculate(ctc)
 
         st.markdown(f"""
-        <div class="card">
-            <div class="subtext">Monthly In-Hand</div>
-            <div class="result">₹{new/12:,.0f}</div>
+        <div style="background:#161B22;padding:20px;border-radius:14px;text-align:center;">
+            <div style="color:#9DA5B4;">Monthly In-Hand</div>
+            <div style="font-size:34px;color:#4C9AFF;">₹{new/12:,.0f}</div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -178,87 +178,17 @@ if page == "Salary Calculator":
 
         with col1:
             st.markdown(f"""
-            <div class="card">
-                <div class="subtext">New Regime</div>
-                <div class="result">₹{new:,.0f}</div>
+            <div style="background:#161B22;padding:20px;border-radius:14px;text-align:center;">
+                <div style="color:#9DA5B4;">New Regime</div>
+                <div style="font-size:28px;color:#4C9AFF;">₹{new:,.0f}</div>
             </div>
             """, unsafe_allow_html=True)
 
         with col2:
             st.markdown(f"""
-            <div class="card">
-                <div class="subtext">Old Regime</div>
-                <div class="result">₹{old:,.0f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        diff = new - old
-
-        st.markdown(f"""
-        <div class="card" style="text-align:center;">
-            <div class="subtext">Better Option</div>
-            <div style="font-size:18px;">
-            {"New Regime is better" if diff > 0 else "Old Regime is better"}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-
-# ================= OFFER =================
-elif page == "Offer Comparison":
-
-    ctc1 = st.number_input("Offer 1 (₹)", 0, step=50000)
-    ctc2 = st.number_input("Offer 2 (₹)", 0, step=50000)
-
-    if ctc1 > 0 and ctc2 > 0:
-        new1, _ = calculate(ctc1)
-        new2, _ = calculate(ctc2)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown(f"""
-            <div class="card">
-                <div class="subtext">Offer 1</div>
-                <div class="result">₹{new1/12:,.0f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col2:
-            st.markdown(f"""
-            <div class="card">
-                <div class="subtext">Offer 2</div>
-                <div class="result">₹{new2/12:,.0f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-
-# ================= TAX OPTIMIZER =================
-elif page == "Tax Optimizer":
-
-    ctc = st.number_input("CTC (₹)", 0, step=50000)
-    section_80c = st.number_input("80C Investment (₹)", value=150000)
-    hra = st.number_input("HRA Exemption (₹)", value=0)
-    other = st.number_input("Other Deductions (₹)", value=0)
-
-    if ctc > 0:
-        new, old = calculate(ctc, section_80c, hra, other)
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown(f"""
-            <div class="card">
-                <div class="subtext">New Regime</div>
-                <div class="result">₹{new:,.0f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with col2:
-            st.markdown(f"""
-            <div class="card">
-                <div class="subtext">Old Regime</div>
-                <div class="result">₹{old:,.0f}</div>
+            <div style="background:#161B22;padding:20px;border-radius:14px;text-align:center;">
+                <div style="color:#9DA5B4;">Old Regime</div>
+                <div style="font-size:28px;color:#4C9AFF;">₹{old:,.0f}</div>
             </div>
             """, unsafe_allow_html=True)
 
@@ -287,15 +217,24 @@ elif page == "HRA Calculator":
         taxable_hra = max(hra_received - exempt, 0)
 
         st.markdown(f"""
-        <div class="card" style="text-align:center; padding:25px;">
+        <div style="
+        background:#161B22;
+        padding:25px;
+        border-radius:14px;
+        text-align:center;
+        ">
 
-            <div class="result">₹{exempt:,.0f}</div>
-            <div class="subtext">Exempt HRA</div>
+            <div style="font-size:34px; color:#4C9AFF;">
+                ₹{exempt:,.0f}
+            </div>
+            <div style="color:#9DA5B4;">Exempt HRA</div>
 
-            <div class="divider"></div>
+            <div style="border-top:1px solid #2a2f36; margin:12px 0;"></div>
 
-            <div style="font-size:22px; margin-top:5px;">₹{taxable_hra:,.0f}</div>
-            <div class="subtext">Taxable HRA</div>
+            <div style="font-size:22px; color:#E6EDF3;">
+                ₹{taxable_hra:,.0f}
+            </div>
+            <div style="color:#9DA5B4;">Taxable HRA</div>
 
         </div>
         """, unsafe_allow_html=True)
@@ -303,7 +242,17 @@ elif page == "HRA Calculator":
 
 # ---------------- FOOTER ----------------
 st.markdown("""
-<div class="footer">
+<div style="
+position:fixed;
+bottom:0;
+width:100%;
+background:#0E1117;
+color:#6B7280;
+text-align:center;
+padding:10px;
+font-size:13px;
+border-top:1px solid #2a2f36;
+">
 🔒 No data stored • Private & secure • SaveTaxX
 </div>
 """, unsafe_allow_html=True)
