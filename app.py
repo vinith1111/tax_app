@@ -2,11 +2,11 @@ import streamlit as st
 
 st.set_page_config(page_title="SaveTax", page_icon="💰")
 
-# ---------------- UI ----------------
+# ---------------- UI STYLE ----------------
 st.markdown("""
 <style>
 .main { background-color: #0E1117; }
-.block-container { max-width: 700px; padding-top: 2rem; }
+.block-container { max-width: 700px; padding-top: 2rem; padding-bottom: 60px; }
 
 h1,h2,h3,p { color: #E6EDF3; }
 
@@ -27,6 +27,20 @@ h1,h2,h3,p { color: #E6EDF3; }
 .subtext { text-align:center; color: gray; }
 
 #MainMenu, footer, header { visibility: hidden; }
+
+/* Sticky Footer */
+.footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background-color: #0E1117;
+    color: gray;
+    text-align: center;
+    padding: 10px;
+    font-size: 13px;
+    border-top: 1px solid #2a2f36;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,7 +60,6 @@ PROFESSIONAL_TAX = 2400
 
 # ---------------- SURCHARGE ----------------
 def apply_surcharge(tax, income, regime="old"):
-
     if income > 50000000:
         surcharge = 0.25 if regime == "new" else 0.37
     elif income > 20000000:
@@ -57,7 +70,6 @@ def apply_surcharge(tax, income, regime="old"):
         surcharge = 0.10
     else:
         surcharge = 0
-
     return tax * (1 + surcharge)
 
 # ---------------- TAX FUNCTIONS ----------------
@@ -81,7 +93,6 @@ def new_tax(income):
             income -= taxable
 
     tax = apply_surcharge(tax, original_income, "new")
-
     return tax * 1.04  # cess
 
 
@@ -101,13 +112,11 @@ def old_tax(income):
             income -= taxable
 
     tax = apply_surcharge(tax, original_income, "old")
-
     return tax * 1.04  # cess
 
 
 # ---------------- CALCULATION ----------------
 def calculate(ctc, section_80c=150000, hra=0, other=0):
-
     basic = ctc * 0.5
 
     employer_pf = basic * 0.12
@@ -180,11 +189,11 @@ elif page == "Offer Comparison":
         st.markdown("</div>", unsafe_allow_html=True)
 
 
-# ================= TAX =================
+# ================= TAX OPTIMIZER =================
 elif page == "Tax Optimizer":
 
     ctc = st.number_input("CTC (₹)", 0, step=50000)
-    section_80c = st.number_input("80C (₹)", value=150000)
+    section_80c = st.number_input("80C Investment (₹)", value=150000)
     hra = st.number_input("HRA Exemption (₹)", value=0)
     other = st.number_input("Other Deductions (₹)", value=0)
 
@@ -200,11 +209,14 @@ elif page == "Tax Optimizer":
 # ================= HRA =================
 elif page == "HRA Calculator":
 
+    st.markdown("### 📍 Location")
+
+    is_metro = st.checkbox("Do you live in a metro city?")
+    st.caption("Metro cities: Delhi, Mumbai, Chennai, Kolkata")
+
     salary = st.number_input("Basic Salary (₹)", 0)
     hra_received = st.number_input("HRA Received (₹)", 0)
     rent = st.number_input("Monthly Rent (₹)", 0)
-    is_metro = st.checkbox("Do you live in Metro City")
-    st.caption("✔ Metro cities: Delhi, Mumbai, Chennai, Kolkata (as per current rules)")
 
     if salary > 0:
         rent_annual = rent * 12
@@ -212,17 +224,30 @@ elif page == "HRA Calculator":
         salary_limit = 0.5 * salary if is_metro else 0.4 * salary
 
         exempt = min(hra_received, rent_minus_10, salary_limit)
+        taxable_hra = max(hra_received - exempt, 0)
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='result'>₹{exempt:,.0f}</div>", unsafe_allow_html=True)
-        st.write("Exempt HRA")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='card' style="text-align:center;">
+            <div class='result'>₹{exempt:,.0f}</div>
+            <div style='color:gray;'>Exempt HRA</div>
 
-        with st.expander("Show details"):
-            st.write(f"HRA: ₹{hra_received:,.0f}")
-            st.write(f"Rent - 10%: ₹{rent_minus_10:,.0f}")
-            st.write(f"{'50%' if is_metro else '40%'} Salary: ₹{salary_limit:,.0f}")
+            <hr style="border:0.5px solid #2a2f36; margin:15px 0;">
+
+            <div style="font-size:22px;">₹{taxable_hra:,.0f}</div>
+            <div style='color:gray;'>Taxable HRA</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        with st.expander("Show calculation details"):
+            st.markdown(f"**HRA Received:** ₹{hra_received:,.0f}")
+            st.markdown(f"**Rent - 10% Salary:** ₹{rent_minus_10:,.0f}")
+            st.markdown(f"**{'50%' if is_metro else '40%'} Salary:** ₹{salary_limit:,.0f}")
+            st.markdown(f"**Taxable HRA:** ₹{taxable_hra:,.0f}")
 
 
 # ---------------- FOOTER ----------------
-st.caption("No data stored. Private & secure.")
+st.markdown("""
+<div class="footer">
+🔒 No data stored • Private & secure • SaveTax
+</div>
+""", unsafe_allow_html=True)
