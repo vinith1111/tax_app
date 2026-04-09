@@ -1,22 +1,18 @@
 import streamlit as st
 
-st.set_page_config(page_title="Salary Insights", page_icon="💰")
+st.set_page_config(page_title="SaveTax", page_icon="💰")
 
-st.title("💰 Salary Insights App")
-st.caption("Know your real in-hand, compare offers, and understand your money")
+# ---------------- SIDEBAR ----------------
+st.sidebar.title("📂 Menu")
 
-# ---------------- INPUT ----------------
-ctc = st.number_input("Enter your CTC (₹)", min_value=0, step=50000)
-
-st.subheader("💡 Your Inputs")
-
-rent = st.number_input("Monthly Rent (₹)", value=0)
-section_80c = st.number_input("80C Investment (₹)", value=150000)
-hra = st.number_input("HRA Exemption (₹)", value=0)
-other = st.number_input("Other Deductions (₹)", value=0)
+page = st.sidebar.radio(
+    "Go to",
+    ["📊 Salary Calculator", "🏢 Offer Comparison", "💡 Tax Optimizer"]
+)
 
 # ---------------- CONSTANTS ----------------
-STANDARD_DEDUCTION = 75000
+STANDARD_DEDUCTION_NEW = 75000
+STANDARD_DEDUCTION_OLD = 50000
 PROFESSIONAL_TAX = 2400
 
 # ---------------- TAX FUNCTIONS ----------------
@@ -62,115 +58,110 @@ def old_tax(income):
     return tax * 1.04
 
 # ---------------- CORE FUNCTION ----------------
-def calculate(ctc):
+def calculate(ctc, section_80c=150000, hra=0, other=0):
     basic = ctc * 0.5
+
     employer_pf = basic * 0.12
     employee_pf = basic * 0.12
 
     gross = ctc - employer_pf
 
-    # NEW
-    taxable_new = max(gross - STANDARD_DEDUCTION, 0)
+    # -------- NEW REGIME --------
+    taxable_new = max(gross - STANDARD_DEDUCTION_NEW, 0)
     tax_new = new_tax(taxable_new)
     inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
 
-    # OLD
-    deductions = STANDARD_DEDUCTION + PROFESSIONAL_TAX + section_80c + hra + other
-    taxable_old = max(gross - deductions, 0)
+    # -------- OLD REGIME --------
+    deductions_old = (
+        STANDARD_DEDUCTION_OLD +
+        PROFESSIONAL_TAX +  # deductible
+        section_80c +
+        hra +
+        other
+    )
+
+    taxable_old = max(gross - deductions_old, 0)
     tax_old = old_tax(taxable_old)
     inhand_old = gross - employee_pf - tax_old - PROFESSIONAL_TAX
 
-    return {
-        "new": inhand_new,
-        "old": inhand_old,
-        "tax_new": tax_new,
-        "tax_old": tax_old,
-        "pf": employer_pf + employee_pf
-    }
+    return inhand_new, inhand_old, tax_new, tax_old, employer_pf + employee_pf
 
-# ---------------- MAIN ----------------
-if ctc > 0:
-    result = calculate(ctc)
 
-    # ===================== RESULT =====================
-    st.subheader("📊 Your In-Hand Salary")
+# ================= PAGE 1 =================
+if page == "📊 Salary Calculator":
+    st.title("💰 Salary Calculator")
 
-    col1, col2 = st.columns(2)
-    col1.metric("New Regime", f"₹{result['new']:,.0f}")
-    col2.metric("Old Regime", f"₹{result['old']:,.0f}")
+    ctc = st.number_input("Enter your CTC (₹)", min_value=0, step=50000)
 
-    st.write(f"Monthly (New): ₹{result['new']/12:,.0f}")
-    st.write(f"Monthly (Old): ₹{result['old']/12:,.0f}")
-
-    # ===================== BEST =====================
-    st.subheader("💡 Best Choice")
-
-    if result['new'] > result['old']:
-        st.success("New regime gives higher in-hand")
-    else:
-        st.success("Old regime gives higher in-hand")
-
-    # ===================== SALARY STORY =====================
-    st.subheader("📦 Your Salary Reality")
-
-    monthly_new = result['new'] / 12
-    savings = monthly_new - rent
-
-    st.write(f"""
-    💰 You earn: ₹{ctc:,.0f}
-
-    👉 You actually get: ₹{monthly_new:,.0f} per month
-
-    💸 Expenses (rent): ₹{rent:,.0f}
-
-    💵 Estimated savings: ₹{savings:,.0f}
-    """)
-
-    # ===================== WHERE MONEY GOES =====================
-    st.subheader("📉 Where your money goes")
-
-    st.write(f"Tax: ₹{result['tax_new']:,.0f}")
-    st.write(f"PF (Total): ₹{result['pf']:,.0f}")
-    st.write(f"Professional Tax: ₹{PROFESSIONAL_TAX}")
-
-    # ===================== ADVICE =====================
-    st.subheader("💡 Simple Advice")
-
-    if result['old'] > result['new']:
-        remaining = max(150000 - section_80c, 0)
-
-        if remaining > 0:
-            st.write(f"• Invest ₹{remaining:,.0f} more under 80C")
-
-        if hra == 0:
-            st.write("• Claim HRA if you pay rent")
-
-        if other == 0:
-            st.write("• Add insurance/donations to reduce tax")
-
-    else:
-        st.write("• New regime is simpler and good for you")
-
-    # ===================== OFFER COMPARISON =====================
-    st.subheader("🏢 Compare Another Offer")
-
-    ctc2 = st.number_input("Enter second offer (₹)", min_value=0, step=50000)
-
-    if ctc2 > 0:
-        result2 = calculate(ctc2)
-
-        st.write("### Comparison")
+    if ctc > 0:
+        new, old, tax_new, tax_old, pf = calculate(ctc)
 
         col1, col2 = st.columns(2)
-        col1.metric("Offer 1 (You)", f"₹{result['new']/12:,.0f}/month")
-        col2.metric("Offer 2", f"₹{result2['new']/12:,.0f}/month")
+        col1.metric("New Regime", f"₹{new:,.0f}")
+        col2.metric("Old Regime", f"₹{old:,.0f}")
 
-        diff = (result2['new'] - result['new']) / 12
+        st.write(f"Monthly (New): ₹{new/12:,.0f}")
+        st.write(f"Monthly (Old): ₹{old/12:,.0f}")
+
+        if new > old:
+            st.success("✅ New regime is better")
+        else:
+            st.success("✅ Old regime is better")
+
+        st.subheader("📦 Breakdown")
+        st.write(f"Tax (New): ₹{tax_new:,.0f}")
+        st.write(f"Tax (Old): ₹{tax_old:,.0f}")
+        st.write(f"PF (Total): ₹{pf:,.0f}")
+        st.write(f"Professional Tax: ₹{PROFESSIONAL_TAX}")
+
+        st.caption("✔ Old regime includes professional tax deduction")
+
+
+# ================= PAGE 2 =================
+elif page == "🏢 Offer Comparison":
+    st.title("🏢 Offer Comparison")
+
+    ctc1 = st.number_input("Offer 1 CTC (₹)", min_value=0, step=50000)
+    ctc2 = st.number_input("Offer 2 CTC (₹)", min_value=0, step=50000)
+
+    if ctc1 > 0 and ctc2 > 0:
+        new1, _, _, _, _ = calculate(ctc1)
+        new2, _, _, _, _ = calculate(ctc2)
+
+        col1, col2 = st.columns(2)
+        col1.metric("Offer 1 (Monthly)", f"₹{new1/12:,.0f}")
+        col2.metric("Offer 2 (Monthly)", f"₹{new2/12:,.0f}")
+
+        diff = (new2 - new1) / 12
 
         if diff > 0:
             st.success(f"Offer 2 gives ₹{diff:,.0f}/month more")
         else:
             st.success(f"Offer 1 gives ₹{abs(diff):,.0f}/month more")
 
-else:
-    st.info("Enter your CTC to begin 🚀")
+
+# ================= PAGE 3 =================
+elif page == "💡 Tax Optimizer":
+    st.title("💡 Tax Optimizer")
+
+    ctc = st.number_input("Enter your CTC (₹)", min_value=0, step=50000)
+
+    section_80c = st.number_input("80C Investment (₹)", value=150000)
+    hra = st.number_input("HRA (₹)", value=0)
+    other = st.number_input("Other Deductions (₹)", value=0)
+
+    if ctc > 0:
+        new, old, _, _, _ = calculate(ctc, section_80c, hra, other)
+
+        st.write(f"New Regime: ₹{new:,.0f}")
+        st.write(f"Old Regime: ₹{old:,.0f}")
+
+        if old > new:
+            st.success("Use Old Regime and maximize deductions")
+
+            remaining = max(150000 - section_80c, 0)
+            if remaining > 0:
+                st.info(f"Invest ₹{remaining:,.0f} more under 80C")
+
+        else:
+            st.info("New Regime is better and simpler")
