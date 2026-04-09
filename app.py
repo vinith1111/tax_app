@@ -78,7 +78,7 @@ div[data-baseweb="input"] {
 
 # ---------------- HEADER ----------------
 st.markdown("""
-<h2 style='text-align:center;'>💰 SaveTax</h2>
+<h2 style='text-align:center;'>💰 SaveTax India</h2>
 <p class='subtext'>Real Salary. No Confusion.</p>
 """, unsafe_allow_html=True)
 
@@ -319,6 +319,6 @@ elif page == "HRA Calculator":
 # ---------------- FOOTER ----------------
 st.markdown("""
 <div class="footer">
-🔒 No data stored • Private & secure • SaveTax
+🔒 No data stored • Private & secure • SaveTax India
 </div>
 """, unsafe_allow_html=True)
