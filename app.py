@@ -1,46 +1,78 @@
 import streamlit as st
 
-st.set_page_config(page_title="SaveTax", page_icon="💰")
+st.set_page_config(page_title="SaveTax India", page_icon="💰")
 
 # ---------------- UI STYLE ----------------
 st.markdown("""
 <style>
-.main { background-color: #0E1117; }
-.block-container { max-width: 700px; padding-top: 2rem; padding-bottom: 60px; }
 
-h1,h2,h3,p { color: #E6EDF3; }
+/* Layout */
+.block-container {
+    max-width: 900px;
+    padding-top: 2rem;
+    padding-bottom: 80px;
+}
 
+/* Background */
+.main {
+    background-color: #0E1117;
+}
+
+/* Typography */
+h1,h2,h3 { color: #E6EDF3; }
+label { color: #9DA5B4 !important; }
+
+/* Inputs */
+div[data-baseweb="input"] {
+    background-color: #161B22 !important;
+    border-radius: 10px !important;
+}
+
+/* Cards */
 .card {
     background-color: #161B22;
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 14px;
     margin-top: 15px;
 }
 
+/* Result */
 .result {
-    font-size: 30px;
+    font-size: 34px;
     font-weight: 600;
-    text-align: center;
     color: #4C9AFF;
+    text-align: center;
 }
 
-.subtext { text-align:center; color: gray; }
+/* Subtext */
+.subtext {
+    text-align: center;
+    color: #9DA5B4;
+    font-size: 14px;
+}
 
-#MainMenu, footer, header { visibility: hidden; }
+/* Divider */
+.divider {
+    border: 0.5px solid #2a2f36;
+    margin: 15px 0;
+}
 
-/* Sticky Footer */
+/* Footer */
 .footer {
     position: fixed;
     bottom: 0;
-    left: 0;
     width: 100%;
-    background-color: #0E1117;
-    color: gray;
+    background: #0E1117;
+    color: #6B7280;
     text-align: center;
     padding: 10px;
     font-size: 13px;
     border-top: 1px solid #2a2f36;
 }
+
+/* Hide Streamlit */
+#MainMenu, header, footer {visibility: hidden;}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -52,7 +84,7 @@ st.markdown("""
 
 # ---------------- SIDEBAR ----------------
 page = st.sidebar.radio(
-    "Menu",
+    "📂 Menu",
     ["Salary Calculator", "Offer Comparison", "Tax Optimizer", "HRA Calculator"]
 )
 
@@ -93,7 +125,7 @@ def new_tax(income):
             income -= taxable
 
     tax = apply_surcharge(tax, original_income, "new")
-    return tax * 1.04  # cess
+    return tax * 1.04
 
 
 def old_tax(income):
@@ -112,24 +144,24 @@ def old_tax(income):
             income -= taxable
 
     tax = apply_surcharge(tax, original_income, "old")
-    return tax * 1.04  # cess
+    return tax * 1.04
 
 
 # ---------------- CALCULATION ----------------
 def calculate(ctc, section_80c=150000, hra=0, other=0):
-    basic = ctc * 0.5
 
+    basic = ctc * 0.5
     employer_pf = basic * 0.12
     employee_pf = basic * 0.12
 
     gross = ctc - employer_pf
 
-    # NEW REGIME
+    # NEW
     taxable_new = max(gross - 75000, 0)
     tax_new = new_tax(taxable_new)
     inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
 
-    # OLD REGIME
+    # OLD
     deductions = 50000 + PROFESSIONAL_TAX + section_80c + hra + other
     taxable_old = max(gross - deductions, 0)
     tax_old = old_tax(taxable_old)
@@ -146,22 +178,41 @@ if page == "Salary Calculator":
     if ctc > 0:
         new, old = calculate(ctc)
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.markdown("<p class='subtext'>Monthly In-Hand</p>", unsafe_allow_html=True)
-        st.markdown(f"<div class='result'>₹{new/12:,.0f}</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card">
+            <div class="subtext">Monthly In-Hand</div>
+            <div class="result">₹{new/12:,.0f}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.write(f"New Regime: ₹{new:,.0f}")
-        st.write(f"Old Regime: ₹{old:,.0f}")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"""
+            <div class="card">
+                <div class="subtext">New Regime</div>
+                <div class="result">₹{new:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+            <div class="card">
+                <div class="subtext">Old Regime</div>
+                <div class="result">₹{old:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
         diff = new - old
-        if diff > 0:
-            st.write(f"New regime gives ₹{diff:,.0f} more")
-        else:
-            st.write(f"Old regime gives ₹{abs(diff):,.0f} more")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="card" style="text-align:center;">
+            <div class="subtext">Better Option</div>
+            <div style="font-size:18px;">
+            {"New Regime is better" if diff > 0 else "Old Regime is better"}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 
 # ================= OFFER =================
@@ -174,19 +225,23 @@ elif page == "Offer Comparison":
         new1, _ = calculate(ctc1)
         new2, _ = calculate(ctc2)
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
 
-        st.write(f"Offer 1 Monthly: ₹{new1/12:,.0f}")
-        st.write(f"Offer 2 Monthly: ₹{new2/12:,.0f}")
+        with col1:
+            st.markdown(f"""
+            <div class="card">
+                <div class="subtext">Offer 1</div>
+                <div class="result">₹{new1/12:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        diff = (new2 - new1) / 12
-
-        if diff > 0:
-            st.write(f"Offer 2 gives ₹{diff:,.0f}/month more")
-        else:
-            st.write(f"Offer 1 gives ₹{abs(diff):,.0f}/month more")
-
-        st.markdown("</div>", unsafe_allow_html=True)
+        with col2:
+            st.markdown(f"""
+            <div class="card">
+                <div class="subtext">Offer 2</div>
+                <div class="result">₹{new2/12:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 # ================= TAX OPTIMIZER =================
@@ -200,10 +255,23 @@ elif page == "Tax Optimizer":
     if ctc > 0:
         new, old = calculate(ctc, section_80c, hra, other)
 
-        st.markdown("<div class='card'>", unsafe_allow_html=True)
-        st.write(f"New Regime: ₹{new:,.0f}")
-        st.write(f"Old Regime: ₹{old:,.0f}")
-        st.markdown("</div>", unsafe_allow_html=True)
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"""
+            <div class="card">
+                <div class="subtext">New Regime</div>
+                <div class="result">₹{new:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col2:
+            st.markdown(f"""
+            <div class="card">
+                <div class="subtext">Old Regime</div>
+                <div class="result">₹{old:,.0f}</div>
+            </div>
+            """, unsafe_allow_html=True)
 
 
 # ================= HRA =================
@@ -219,6 +287,7 @@ elif page == "HRA Calculator":
     rent = st.number_input("Monthly Rent (₹)", 0)
 
     if salary > 0:
+
         rent_annual = rent * 12
         rent_minus_10 = rent_annual - (0.1 * salary)
         salary_limit = 0.5 * salary if is_metro else 0.4 * salary
@@ -227,14 +296,16 @@ elif page == "HRA Calculator":
         taxable_hra = max(hra_received - exempt, 0)
 
         st.markdown(f"""
-        <div class='card' style="text-align:center;">
-            <div class='result'>₹{exempt:,.0f}</div>
-            <div style='color:gray;'>Exempt HRA</div>
+        <div class="card" style="text-align:center;">
 
-            <hr style="border:0.5px solid #2a2f36; margin:15px 0;">
+            <div class="result">₹{exempt:,.0f}</div>
+            <div class="subtext">Exempt HRA</div>
 
-            <div style="font-size:22px;">₹{taxable_hra:,.0f}</div>
-            <div style='color:gray;'>Taxable HRA</div>
+            <div class="divider"></div>
+
+            <div style="font-size:24px;">₹{taxable_hra:,.0f}</div>
+            <div class="subtext">Taxable HRA</div>
+
         </div>
         """, unsafe_allow_html=True)
 
