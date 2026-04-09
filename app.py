@@ -188,7 +188,7 @@ elif page == "🏠 HRA Calculator":
     hra_received = st.number_input("HRA Received (₹)", min_value=0)
     rent_paid = st.number_input("Rent Paid (₹)", min_value=0)
 
-    metro = st.checkbox("Metro City")
+    metro = st.checkbox("Do you live in Metro City ?")
     st.caption("✔ Metro cities: Delhi, Mumbai, Chennai, Kolkata (current rules)")
 
     if salary > 0 and hra_received > 0 and rent_paid > 0:
