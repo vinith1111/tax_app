@@ -1,26 +1,15 @@
 import streamlit as st
 
-# ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="SaveTax", page_icon="💰")
 
-# ---------------- PREMIUM UI STYLE ----------------
+# ---------------- UI ----------------
 st.markdown("""
 <style>
-.main {
-    background-color: #0E1117;
-}
+.main { background-color: #0E1117; }
+.block-container { max-width: 700px; padding-top: 2rem; }
 
-.block-container {
-    max-width: 700px;
-    padding-top: 2rem;
-}
+h1,h2,h3,p { color: #E6EDF3; }
 
-/* Text */
-h1, h2, h3, p {
-    color: #E6EDF3;
-}
-
-/* Card */
 .card {
     background-color: #161B22;
     padding: 20px;
@@ -28,24 +17,16 @@ h1, h2, h3, p {
     margin-top: 15px;
 }
 
-/* Result highlight */
 .result {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 600;
     text-align: center;
     color: #4C9AFF;
 }
 
-/* Sub text */
-.subtext {
-    text-align: center;
-    color: gray;
-}
+.subtext { text-align:center; color: gray; }
 
-/* Hide Streamlit header */
-#MainMenu, footer, header {
-    visibility: hidden;
-}
+#MainMenu, footer, header { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -56,24 +37,39 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ---------------- SIDEBAR ----------------
-st.sidebar.title("Menu")
-page = st.sidebar.radio("", ["Salary Calculator", "Offer Comparison"])
+page = st.sidebar.radio(
+    "Menu",
+    ["Salary Calculator", "Offer Comparison", "Tax Optimizer", "HRA Calculator"]
+)
 
-# ---------------- CONSTANTS ----------------
 PROFESSIONAL_TAX = 2400
+
+# ---------------- SURCHARGE ----------------
+def apply_surcharge(tax, income, regime="old"):
+
+    if income > 50000000:
+        surcharge = 0.25 if regime == "new" else 0.37
+    elif income > 20000000:
+        surcharge = 0.25
+    elif income > 10000000:
+        surcharge = 0.15
+    elif income > 5000000:
+        surcharge = 0.10
+    else:
+        surcharge = 0
+
+    return tax * (1 + surcharge)
 
 # ---------------- TAX FUNCTIONS ----------------
 def new_tax(income):
     if income <= 1200000:
         return 0
 
+    original_income = income
+
     slabs = [
-        (400000, 0),
-        (400000, 0.05),
-        (400000, 0.10),
-        (400000, 0.15),
-        (400000, 0.20),
-        (400000, 0.25),
+        (400000, 0),(400000, 0.05),(400000, 0.10),
+        (400000, 0.15),(400000, 0.20),(400000, 0.25),
         (float('inf'), 0.30)
     ]
 
@@ -84,14 +80,17 @@ def new_tax(income):
             tax += taxable * rate
             income -= taxable
 
-    return tax * 1.04
+    tax = apply_surcharge(tax, original_income, "new")
+
+    return tax * 1.04  # cess
+
 
 def old_tax(income):
+    original_income = income
+
     slabs = [
-        (250000, 0),
-        (250000, 0.05),
-        (500000, 0.20),
-        (float('inf'), 0.30)
+        (250000, 0),(250000, 0.05),
+        (500000, 0.20),(float('inf'), 0.30)
     ]
 
     tax = 0
@@ -101,10 +100,14 @@ def old_tax(income):
             tax += taxable * rate
             income -= taxable
 
-    return tax * 1.04
+    tax = apply_surcharge(tax, original_income, "old")
+
+    return tax * 1.04  # cess
+
 
 # ---------------- CALCULATION ----------------
 def calculate(ctc, section_80c=150000, hra=0, other=0):
+
     basic = ctc * 0.5
 
     employer_pf = basic * 0.12
@@ -125,33 +128,25 @@ def calculate(ctc, section_80c=150000, hra=0, other=0):
 
     return inhand_new, inhand_old
 
-# ================= SALARY CALCULATOR =================
+
+# ================= SALARY =================
 if page == "Salary Calculator":
 
-    ctc = st.number_input("Enter your CTC (₹)", min_value=0, step=50000)
-
-    st.markdown("### Optional (Old Regime)")
-    section_80c = st.number_input("80C (₹)", value=150000)
-    hra = st.number_input("HRA (₹)", value=0)
-    other = st.number_input("Other deductions (₹)", value=0)
+    ctc = st.number_input("Enter CTC (₹)", 0, step=50000)
 
     if ctc > 0:
-        new, old = calculate(ctc, section_80c, hra, other)
+        new, old = calculate(ctc)
 
-        # RESULT CARD
         st.markdown("<div class='card'>", unsafe_allow_html=True)
         st.markdown("<p class='subtext'>Monthly In-Hand</p>", unsafe_allow_html=True)
         st.markdown(f"<div class='result'>₹{new/12:,.0f}</div>", unsafe_allow_html=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        # COMPARISON
         st.markdown("<div class='card'>", unsafe_allow_html=True)
-
         st.write(f"New Regime: ₹{new:,.0f}")
         st.write(f"Old Regime: ₹{old:,.0f}")
 
         diff = new - old
-
         if diff > 0:
             st.write(f"New regime gives ₹{diff:,.0f} more")
         else:
@@ -159,11 +154,12 @@ if page == "Salary Calculator":
 
         st.markdown("</div>", unsafe_allow_html=True)
 
-# ================= OFFER COMPARISON =================
+
+# ================= OFFER =================
 elif page == "Offer Comparison":
 
-    ctc1 = st.number_input("Offer 1 (₹)", min_value=0, step=50000)
-    ctc2 = st.number_input("Offer 2 (₹)", min_value=0, step=50000)
+    ctc1 = st.number_input("Offer 1 (₹)", 0, step=50000)
+    ctc2 = st.number_input("Offer 2 (₹)", 0, step=50000)
 
     if ctc1 > 0 and ctc2 > 0:
         new1, _ = calculate(ctc1)
@@ -182,6 +178,51 @@ elif page == "Offer Comparison":
             st.write(f"Offer 1 gives ₹{abs(diff):,.0f}/month more")
 
         st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ================= TAX =================
+elif page == "Tax Optimizer":
+
+    ctc = st.number_input("CTC (₹)", 0, step=50000)
+    section_80c = st.number_input("80C (₹)", value=150000)
+    hra = st.number_input("HRA Exemption (₹)", value=0)
+    other = st.number_input("Other Deductions (₹)", value=0)
+
+    if ctc > 0:
+        new, old = calculate(ctc, section_80c, hra, other)
+
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.write(f"New Regime: ₹{new:,.0f}")
+        st.write(f"Old Regime: ₹{old:,.0f}")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+
+# ================= HRA =================
+elif page == "HRA Calculator":
+
+    salary = st.number_input("Basic Salary (₹)", 0)
+    hra_received = st.number_input("HRA Received (₹)", 0)
+    rent = st.number_input("Monthly Rent (₹)", 0)
+    is_metro = st.checkbox("Do you live in Metro City")
+    st.caption("✔ Metro cities: Delhi, Mumbai, Chennai, Kolkata (as per current rules)")
+
+    if salary > 0:
+        rent_annual = rent * 12
+        rent_minus_10 = rent_annual - (0.1 * salary)
+        salary_limit = 0.5 * salary if is_metro else 0.4 * salary
+
+        exempt = min(hra_received, rent_minus_10, salary_limit)
+
+        st.markdown("<div class='card'>", unsafe_allow_html=True)
+        st.markdown(f"<div class='result'>₹{exempt:,.0f}</div>", unsafe_allow_html=True)
+        st.write("Exempt HRA")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+        with st.expander("Show details"):
+            st.write(f"HRA: ₹{hra_received:,.0f}")
+            st.write(f"Rent - 10%: ₹{rent_minus_10:,.0f}")
+            st.write(f"{'50%' if is_metro else '40%'} Salary: ₹{salary_limit:,.0f}")
+
 
 # ---------------- FOOTER ----------------
 st.caption("No data stored. Private & secure.")
