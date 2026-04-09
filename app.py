@@ -1,34 +1,28 @@
 import streamlit as st
 
-st.set_page_config(page_title="SaveTax", page_icon="💰")
+st.set_page_config(page_title="SaveTaxX", page_icon="💰")
 
 # ---------------- UI STYLE ----------------
 st.markdown("""
 <style>
-
-/* Layout */
 .block-container {
     max-width: 900px;
     padding-top: 2rem;
     padding-bottom: 80px;
 }
 
-/* Background */
 .main {
     background-color: #0E1117;
 }
 
-/* Typography */
 h1,h2,h3 { color: #E6EDF3; }
 label { color: #9DA5B4 !important; }
 
-/* Inputs */
 div[data-baseweb="input"] {
     background-color: #161B22 !important;
     border-radius: 10px !important;
 }
 
-/* Cards */
 .card {
     background-color: #161B22;
     padding: 20px;
@@ -36,7 +30,6 @@ div[data-baseweb="input"] {
     margin-top: 15px;
 }
 
-/* Result */
 .result {
     font-size: 34px;
     font-weight: 600;
@@ -44,20 +37,17 @@ div[data-baseweb="input"] {
     text-align: center;
 }
 
-/* Subtext */
 .subtext {
     text-align: center;
     color: #9DA5B4;
     font-size: 14px;
 }
 
-/* Divider */
 .divider {
     border: 0.5px solid #2a2f36;
     margin: 15px 0;
 }
 
-/* Footer */
 .footer {
     position: fixed;
     bottom: 0;
@@ -70,15 +60,13 @@ div[data-baseweb="input"] {
     border-top: 1px solid #2a2f36;
 }
 
-/* Hide Streamlit */
 #MainMenu, header, footer {visibility: hidden;}
-
 </style>
 """, unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
 st.markdown("""
-<h2 style='text-align:center;'>💰 SaveTax</h2>
+<h2 style='text-align:center;'>💰 SaveTaxX</h2>
 <p class='subtext'>Real Salary. No Confusion.</p>
 """, unsafe_allow_html=True)
 
@@ -156,12 +144,10 @@ def calculate(ctc, section_80c=150000, hra=0, other=0):
 
     gross = ctc - employer_pf
 
-    # NEW
     taxable_new = max(gross - 75000, 0)
     tax_new = new_tax(taxable_new)
     inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
 
-    # OLD
     deductions = 50000 + PROFESSIONAL_TAX + section_80c + hra + other
     taxable_old = max(gross - deductions, 0)
     tax_old = old_tax(taxable_old)
@@ -202,17 +188,6 @@ if page == "Salary Calculator":
                 <div class="result">₹{old:,.0f}</div>
             </div>
             """, unsafe_allow_html=True)
-
-        diff = new - old
-
-        st.markdown(f"""
-        <div class="card" style="text-align:center;">
-            <div class="subtext">Better Option</div>
-            <div style="font-size:18px;">
-            {"New Regime is better" if diff > 0 else "Old Regime is better"}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
 
 # ================= OFFER =================
@@ -286,10 +261,12 @@ elif page == "HRA Calculator":
     hra_received = st.number_input("HRA Received (₹)", 0)
     rent = st.number_input("Monthly Rent (₹)", 0)
 
+    st.caption("Enter monthly rent (example: 20000)")
+
     if salary > 0:
 
         rent_annual = rent * 12
-        rent_minus_10 = rent_annual - (0.1 * salary)
+        rent_minus_10 = max(rent_annual - (0.1 * salary), 0)
         salary_limit = 0.5 * salary if is_metro else 0.4 * salary
 
         exempt = min(hra_received, rent_minus_10, salary_limit)
@@ -313,12 +290,11 @@ elif page == "HRA Calculator":
             st.markdown(f"**HRA Received:** ₹{hra_received:,.0f}")
             st.markdown(f"**Rent - 10% Salary:** ₹{rent_minus_10:,.0f}")
             st.markdown(f"**{'50%' if is_metro else '40%'} Salary:** ₹{salary_limit:,.0f}")
-            st.markdown(f"**Taxable HRA:** ₹{taxable_hra:,.0f}")
 
 
 # ---------------- FOOTER ----------------
 st.markdown("""
 <div class="footer">
-🔒 No data stored • Private & secure • SaveTax
+🔒 No data stored • Private & secure • SaveTaxX
 </div>
 """, unsafe_allow_html=True)
