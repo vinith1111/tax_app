@@ -162,7 +162,7 @@ if page == "Salary Calculator":
         col2.metric("Old Regime", f"₹{old:,.0f}")
 
         if abs(new > old) < 1:
-            st.info(f"Both regime gives by result")
+            st.info(f"Both regime gives same result")
         elif new > old:
             st.info(f"New regime better by ₹{new-old:,.0f}")
         else:
