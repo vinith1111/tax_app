@@ -8,7 +8,7 @@ st.markdown("""
 .block-container {
     max-width: 900px;
     padding-top: 2rem;
-    padding-bottom: 80px;
+    padding-bottom: 100px;
 }
 
 .main {
@@ -63,6 +63,9 @@ div[data-baseweb="input"] {
 #MainMenu, header, footer {visibility: hidden;}
 </style>
 """, unsafe_allow_html=True)
+
+# spacing fix
+st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
 # ---------------- HEADER ----------------
 st.markdown("""
@@ -189,6 +192,17 @@ if page == "Salary Calculator":
             </div>
             """, unsafe_allow_html=True)
 
+        diff = new - old
+
+        st.markdown(f"""
+        <div class="card" style="text-align:center;">
+            <div class="subtext">Better Option</div>
+            <div style="font-size:18px;">
+            {"New Regime is better" if diff > 0 else "Old Regime is better"}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
 
 # ================= OFFER =================
 elif page == "Offer Comparison":
@@ -273,23 +287,18 @@ elif page == "HRA Calculator":
         taxable_hra = max(hra_received - exempt, 0)
 
         st.markdown(f"""
-        <div class="card" style="text-align:center;">
+        <div class="card" style="text-align:center; padding:25px;">
 
             <div class="result">₹{exempt:,.0f}</div>
             <div class="subtext">Exempt HRA</div>
 
             <div class="divider"></div>
 
-            <div style="font-size:24px;">₹{taxable_hra:,.0f}</div>
+            <div style="font-size:22px; margin-top:5px;">₹{taxable_hra:,.0f}</div>
             <div class="subtext">Taxable HRA</div>
 
         </div>
         """, unsafe_allow_html=True)
-
-        with st.expander("Show calculation details"):
-            st.markdown(f"**HRA Received:** ₹{hra_received:,.0f}")
-            st.markdown(f"**Rent - 10% Salary:** ₹{rent_minus_10:,.0f}")
-            st.markdown(f"**{'50%' if is_metro else '40%'} Salary:** ₹{salary_limit:,.0f}")
 
 
 # ---------------- FOOTER ----------------
