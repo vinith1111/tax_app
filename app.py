@@ -145,6 +145,25 @@ def calculate(ctc, section_80c=150000, hra=0, other=0):
 
     return inhand_new, inhand_old, taxable_new, taxable_old
 
+    #====================format amount====================
+    def format_inr(amount):
+    s = str(int(amount))
+    if len(s) <= 3:
+        return "₹" + s
+
+    last3 = s[-3:]
+    rest = s[:-3]
+
+    parts = []
+    while len(rest) > 2:
+        parts.insert(0, rest[-2:])
+        rest = rest[:-2]
+
+    if rest:
+        parts.insert(0, rest)
+
+    return "₹" + ",".join(parts + [last3])
+
 
 # ================= SALARY =================
 if page == "Salary Calculator":
