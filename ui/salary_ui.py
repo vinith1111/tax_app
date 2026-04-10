@@ -126,27 +126,27 @@ def render():
         st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
         st.markdown(f"- **Total Tax: `{format_inr(result['tax_new'])}`**")
 
-        # # ADD HERE (inside col2)
-        # if result["marginal_relief_savings"] > 0:
-        #     st.markdown(f"""
-        #     <div style="
-        #         background:#1a1f2e;
-        #         border:1px solid #1f2937;
-        #         border-radius:12px;
-        #         padding:14px 16px;
-        #         margin-top:12px;
-        #     ">
-        #         <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
-        #             🧠 Marginal Relief Insight
-        #         </div>
-        #         <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
-        #             You crossed <b>₹12L</b> by 
-        #             <span style="color:#22c55e;">₹{result['excess_income']}</span><br>
-        #             Tax reduced by 
-        #             <span style="color:#22c55e;">₹{result['marginal_relief_savings']}</span>
-        #         </div>
-        #     </div>
-        #     """, unsafe_allow_html=True)
+        # ADD HERE (inside col2)
+        if result["marginal_relief_savings"] > 0:
+            st.markdown(f"""
+            <div style="
+                background:#1a1f2e;
+                border:1px solid #1f2937;
+                border-radius:12px;
+                padding:14px 16px;
+                margin-top:12px;
+            ">
+                <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
+                    🧠 Marginal Relief Insight
+                </div>
+                <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
+                    You crossed <b>₹12L</b> by 
+                    <span style="color:#22c55e;">₹{result['excess_income']}</span><br>
+                    Tax reduced by 
+                    <span style="color:#22c55e;">₹{result['marginal_relief_savings']}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
         st.markdown("**🏛 Old Regime Tax**")
         st.markdown(f"- Taxable Income: `{format_inr(result['taxable_old'])}`")
