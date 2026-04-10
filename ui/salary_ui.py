@@ -155,6 +155,6 @@ def render():
         st.markdown(f"- Cess (4%): `{format_inr(result['cess_old'])}`")
         st.markdown(f"- **Total Tax: `{format_inr(result['tax_old'])}`**")
 
-    # Outside columns (correct)
+    ## Outside columns (correct)
     if result["surcharge_new"] > 0:
         st.warning("⚠️ Surcharge applied — income exceeds ₹50L")
