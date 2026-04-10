@@ -20,48 +20,70 @@ def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
 
     # ── NEW REGIME ──────────────────────────────────────────────
     taxable_new = max(gross - STD_DEDUCTION_NEW, 0)
+
     base_tax_new, surcharge_new, cess_new, tax_new = new_tax(taxable_new)
 
-    REBATE_LIMIT_NEW = 1200000  # REBATE NEW
+    original_tax_new = tax_new  # before relief
+
+    REBATE_LIMIT_NEW = 1200000  # ₹12L
 
     if taxable_new <= REBATE_LIMIT_NEW:
-        rebate_new = min(tax_new, 60000)
-        tax_new -= rebate_new
+        tax_new = 0
+        excess = 0
+        threshold_msg = "🟢 Within ₹12L rebate zone (No tax)"
     else:
-        rebate_new = 0
-
-    if taxable_new > REBATE_LIMIT_NEW:
         excess = taxable_new - REBATE_LIMIT_NEW
+
         if tax_new > excess:
             tax_new = excess
-    else:
-        excess = 0
+
+        threshold_msg = "🟠 Above ₹12L - Marginal relief applied"
+
+    # Marginal relief savings
+    marginal_relief_savings = max(original_tax_new - tax_new, 0)
 
     inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
 
     # ── OLD REGIME ──────────────────────────────────────────────
     deductions = STD_DEDUCTION_OLD + PROFESSIONAL_TAX + section_80c + hra + other
+
     taxable_old = max(gross - deductions, 0)
 
     base_tax_old, surcharge_old, cess_old, tax_old = old_tax(taxable_old)
 
-    REBATE_LIMIT_OLD = 500000  # Correct limit for old regime
+    REBATE_LIMIT_OLD = 500000
 
     if taxable_old <= REBATE_LIMIT_OLD:
-        rebate_old = min(tax_old, 12500)
-        tax_old -= rebate_old
-    else:
-        rebate_old = 0
+        tax_old = 0
 
     inhand_old = gross - employee_pf - tax_old - PROFESSIONAL_TAX
 
-    # Extra insight
-    excess_income = taxable_new - REBATE_LIMIT_NEW if taxable_new > REBATE_LIMIT_NEW else 0
+    # ── DERIVED INSIGHTS ─────────────────────────────────────────
+    monthly_inhand_new = inhand_new / 12
+    monthly_inhand_old = inhand_old / 12
+
+    effective_tax_new = (tax_new / gross) * 100 if gross > 0 else 0
+    effective_tax_old = (tax_old / gross) * 100 if gross > 0 else 0
+
+    # Best regime
+    if inhand_new > inhand_old:
+        best_regime = "New Regime 🟢"
+        benefit = inhand_new - inhand_old
+    else:
+        best_regime = "Old Regime 🔵"
+        benefit = inhand_old - inhand_new
+
+    # Extras
+    excess_income = excess if taxable_new > REBATE_LIMIT_NEW else 0
 
     return {
         # In-hand
         "new_inhand": round(inhand_new),
         "old_inhand": round(inhand_old),
+
+        # Monthly
+        "monthly_new": round(monthly_inhand_new),
+        "monthly_old": round(monthly_inhand_old),
 
         # Salary structure
         "basic": round(basic),
@@ -83,6 +105,16 @@ def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
         "cess_old": cess_old,
         "tax_old": tax_old,
 
-        # Extras
+        # Insights
+        "effective_tax_new": round(effective_tax_new, 2),
+        "effective_tax_old": round(effective_tax_old, 2),
+        "best_regime": best_regime,
+        "benefit_amount": round(benefit),
+
+        # Marginal relief
         "excess_income": round(excess_income),
+        "marginal_relief_savings": round(marginal_relief_savings),
+
+        # UX message
+        "threshold_message": threshold_msg,
     }
