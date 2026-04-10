@@ -107,31 +107,54 @@ def render():
     # ── DETAILED BREAKDOWN ──────────────────────────────────────
     with st.expander("🔍 Full Breakdown"):
 
-        col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
-        with col1:
-            st.markdown("**💼 Salary Structure**")
-            st.markdown(f"- CTC: `{format_inr(ctc)}`")
-            st.markdown(f"- Basic (50%): `{format_inr(result['basic'])}`")
-            st.markdown(f"- Employer PF: `{format_inr(result['employer_pf'])}`")
-            st.markdown(f"- Gross: `{format_inr(result['gross'])}`")
-            st.markdown(f"- Employee PF: `{format_inr(result['employee_pf'])}`")
-            st.markdown(f"- Professional Tax: `₹2,400`")
+    with col1:
+        st.markdown("**💼 Salary Structure**")
+        st.markdown(f"- CTC: `{format_inr(ctc)}`")
+        st.markdown(f"- Basic (50%): `{format_inr(result['basic'])}`")
+        st.markdown(f"- Employer PF: `{format_inr(result['employer_pf'])}`")
+        st.markdown(f"- Gross: `{format_inr(result['gross'])}`")
+        st.markdown(f"- Employee PF: `{format_inr(result['employee_pf'])}`")
+        st.markdown(f"- Professional Tax: `₹2,400`")
 
-        with col2:
-            st.markdown("**🏛 New Regime Tax**")
-            st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
-            st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
-            st.markdown(f"- Surcharge: `{format_inr(result['surcharge_new'])}`")
-            st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
-            st.markdown(f"- **Total Tax: `{format_inr(result['tax_new'])}`**")
+    with col2:
+        st.markdown("**🏛 New Regime Tax**")
+        st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
+        st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
+        st.markdown(f"- Surcharge: `{format_inr(result['surcharge_new'])}`")
+        st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
+        st.markdown(f"- **Total Tax: `{format_inr(result['tax_new'])}`**")
 
-            st.markdown("**🏛 Old Regime Tax**")
-            st.markdown(f"- Taxable Income: `{format_inr(result['taxable_old'])}`")
-            st.markdown(f"- Base Tax: `{format_inr(result['base_tax_old'])}`")
-            st.markdown(f"- Surcharge: `{format_inr(result['surcharge_old'])}`")
-            st.markdown(f"- Cess (4%): `{format_inr(result['cess_old'])}`")
-            st.markdown(f"- **Total Tax: `{format_inr(result['tax_old'])}`**")
+        # ADD HERE (inside col2)
+        if result["marginal_relief_savings"] > 0:
+            st.markdown(f"""
+            <div style="
+                background:#1a1f2e;
+                border:1px solid #1f2937;
+                border-radius:12px;
+                padding:14px 16px;
+                margin-top:12px;
+            ">
+                <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
+                    🧠 Marginal Relief Insight
+                </div>
+                <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
+                    You crossed <b>₹12L</b> by 
+                    <span style="color:#22c55e;">₹{result['excess_income']}</span><br>
+                    Tax reduced by 
+                    <span style="color:#22c55e;">₹{result['marginal_relief_savings']}</span>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-        if result["surcharge_new"] > 0:
-            st.warning("⚠️ Surcharge applied — income exceeds ₹50L")
+        st.markdown("**🏛 Old Regime Tax**")
+        st.markdown(f"- Taxable Income: `{format_inr(result['taxable_old'])}`")
+        st.markdown(f"- Base Tax: `{format_inr(result['base_tax_old'])}`")
+        st.markdown(f"- Surcharge: `{format_inr(result['surcharge_old'])}`")
+        st.markdown(f"- Cess (4%): `{format_inr(result['cess_old'])}`")
+        st.markdown(f"- **Total Tax: `{format_inr(result['tax_old'])}`**")
+
+    # Outside columns (correct)
+    if result["surcharge_new"] > 0:
+        st.warning("⚠️ Surcharge applied — income exceeds ₹50L")
