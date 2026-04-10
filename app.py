@@ -8,7 +8,7 @@ from ui.hra_ui import render as hra_page
 st.set_page_config(
     page_title="SaveTaxX",
     page_icon="💰",
-    layout="centered",
+    layout="wide",  # CHANGED (from centered → wide)
     initial_sidebar_state="expanded",
 )
 
@@ -35,7 +35,14 @@ st.markdown("""
         background: #1a1f2e;
         border: 1px solid #1f2937;
         border-radius: 12px;
-        padding: 12px 16px;
+        padding: 16px 20px;  /* slightly increased */
+    }
+
+    /* FIX: Prevent text truncation in metrics */
+    [data-testid="stMetricValue"] {
+        font-size: 22px !important;
+        white-space: nowrap !important;
+        overflow: visible !important;
     }
 
     /* Expanders */
@@ -70,7 +77,6 @@ st.markdown("""
 
     /* Dataframe */
     [data-testid="stDataFrame"] {
-        # border-radius: 12px;
         overflow: hidden;
     }
 
@@ -94,16 +100,6 @@ with st.sidebar:
         ["Salary Calculator", "Offer Comparison", "Tax Optimizer", "HRA Calculator"],
         label_visibility="visible",
     )
-
-    # st.markdown("---")
-    # st.markdown("""
-    # <div style='font-size:12px; color:#4b5563; padding:8px 0;'>
-        # <p>📅 FY 2024–25 | AY 2025–26</p>
-        # <p>🏛 New & Old regime comparison</p>
-        # <p>✅ Surcharge & cess included</p>
-        # <p>🔒 No data stored. Private & secure.</p>
-    # </div>
-    # """, unsafe_allow_html=True)
 
 # ── PAGE ROUTING ─────────────────────────────────────────────
 if page == "Salary Calculator":
