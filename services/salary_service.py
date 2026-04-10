@@ -7,6 +7,7 @@ from utils.constants import (
     PF_CAP_MONTHLY,
 )
 
+
 def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
     basic = ctc * 0.5
 
@@ -20,8 +21,28 @@ def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
     # ── NEW REGIME ──────────────────────────────────────────────
     taxable_new = max(gross - STD_DEDUCTION_NEW, 0)
     base_tax_new, surcharge_new, cess_new, tax_new = new_tax(taxable_new)
+    
+    REBATE_LIMIT_NEW = 1200000 #REBATE NEW
+    if taxable_new <= REBATE_LIMIT_NEW:
+        rebate_new = min(tax_new,60000)
+        tax_new =tax_new - rebate_new
+    else:
+        rebate_new = 0
+
+    if taxable_new > REBATE_LIMIT_NEW:
+        excess =taxable_new - REBATE_LIMIT_NEW
+        if tax_new > excess:
+            tax_new = excess
+
+    REBATE_LIMIT_OLD = 1200000 #REBATE OLD
+    if taxable_old <= REBATE_LIMIT_OLD:
+        rebate_old = min(tax_old,12500)
+        tax_old = tax_old - rebate_old
+    else:
+        rebate_old = 0        
+
     inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
-    excess_income = max(taxable_new - 1_200_000, 0)
+    
 
     # ── OLD REGIME ──────────────────────────────────────────────
     deductions = STD_DEDUCTION_OLD + PROFESSIONAL_TAX + section_80c + hra + other
