@@ -1,26 +1,11 @@
 import streamlit as st
 
+from services.salary_service import calculate_salary
+from services.hra_service import calculate_hra
+from utils.formatter import format_inr
+from validators.input_validator import validate_ctc
+
 st.set_page_config(page_title="SaveTaxX", page_icon="💰")
-
-# ---------------- INR FORMAT ----------------
-def format_inr(amount):
-    s = str(int(amount))
-    if len(s) <= 3:
-        return "₹" + s
-
-    last3 = s[-3:]
-    rest = s[:-3]
-
-    parts = []
-    while len(rest) > 2:
-        parts.insert(0, rest[-2:])
-        rest = rest[:-2]
-
-    if rest:
-        parts.insert(0, rest)
-
-    return "₹" + ",".join(parts + [last3])
-
 
 # ---------------- HEADER ----------------
 st.title("💰 SaveTaxX")
@@ -32,101 +17,22 @@ page = st.sidebar.radio(
     ["Salary Calculator", "Offer Comparison", "Tax Optimizer", "HRA Calculator"]
 )
 
-PROFESSIONAL_TAX = 2400
-
-
-# ---------------- SURCHARGE ----------------
-def apply_surcharge(tax, income, regime):
-    if income > 50000000:
-        surcharge = 0.25 if regime == "new" else 0.37
-    elif income > 20000000:
-        surcharge = 0.25
-    elif income > 10000000:
-        surcharge = 0.15
-    elif income > 5000000:
-        surcharge = 0.10
-    else:
-        surcharge = 0
-
-    return tax * (1 + surcharge)
-
-
-# ---------------- TAX FUNCTIONS ----------------
-def new_tax(income):
-    if income <= 1200000:
-        return 0
-
-    original_income = income
-    tax = 0
-
-    slabs = [
-        (400000, 0),(400000, 0.05),(400000, 0.10),
-        (400000, 0.15),(400000, 0.20),(400000, 0.25),
-        (float('inf'), 0.30)
-    ]
-
-    for limit, rate in slabs:
-        if income > 0:
-            taxable = min(income, limit)
-            tax += taxable * rate
-            income -= taxable
-
-    tax = apply_surcharge(tax, original_income, "new")
-    return tax * 1.04
-
-
-def old_tax(income):
-    original_income = income
-    tax = 0
-
-    slabs = [
-        (250000, 0),(250000, 0.05),
-        (500000, 0.20),(float('inf'), 0.30)
-    ]
-
-    for limit, rate in slabs:
-        if income > 0:
-            taxable = min(income, limit)
-            tax += taxable * rate
-            income -= taxable
-
-    tax = apply_surcharge(tax, original_income, "old")
-    return tax * 1.04
-
-
-# ---------------- CALCULATION ----------------
-def calculate(ctc, section_80c=150000, hra=0, other=0):
-
-    basic = ctc * 0.5
-    employer_pf = basic * 0.12
-    employee_pf = basic * 0.12
-
-    gross = ctc - employer_pf
-
-    taxable_new = max(gross - 75000, 0)
-    tax_new = new_tax(taxable_new)
-    inhand_new = gross - employee_pf - tax_new - PROFESSIONAL_TAX
-
-    deductions = 50000 + PROFESSIONAL_TAX + section_80c + hra + other
-    taxable_old = max(gross - deductions, 0)
-    tax_old = old_tax(taxable_old)
-    inhand_old = gross - employee_pf - tax_old - PROFESSIONAL_TAX
-
-    # ✅ FIX: ROUND AT SOURCE (prevents ₹1 mismatch)
-    return round(inhand_new), round(inhand_old), round(taxable_new), round(taxable_old)
-
-
 # ================= SALARY =================
 if page == "Salary Calculator":
 
     ctc = st.number_input("Enter CTC (₹)", 0, step=50000)
 
-    if ctc > 0 and ctc < 100000:
-        st.error("CTC should be minimum ₹1,00,000")
+    valid, msg = validate_ctc(ctc)
 
-    elif ctc >= 100000:
+    if ctc > 0 and not valid:
+        st.error(msg)
 
-        new, old, _, _ = calculate(ctc)
+    elif valid and ctc > 0:
+
+        result = calculate_salary(ctc)
+
+        new = result["new_inhand"]
+        old = result["old_inhand"]
 
         st.subheader("💸 Monthly In-Hand")
         st.success(format_inr(round(new / 12)))
@@ -142,6 +48,27 @@ if page == "Salary Calculator":
         else:
             st.info(f"Old regime better by {format_inr(old - new)}")
 
+        # ----------- BREAKDOWN -----------
+        with st.expander("📊 View Salary Breakdown"):
+
+            st.markdown("### 💼 Salary Structure")
+            st.write(f"CTC: {format_inr(ctc)}")
+            st.write(f"Basic Salary (50%): {format_inr(result['basic'])}")
+            st.write(f"Employer PF (12%): {format_inr(result['employer_pf'])}")
+            st.write(f"Gross Salary: {format_inr(result['gross'])}")
+
+            st.markdown("### 🧾 Deductions")
+            st.write(f"Employee PF (12%): {format_inr(result['employee_pf'])}")
+            st.write("Professional Tax: ₹2,400")
+
+            st.markdown("### 🏛 Tax")
+            st.write(f"Tax (New Regime): {format_inr(result['tax_new'])}")
+            st.write(f"Tax (Old Regime): {format_inr(result['tax_old'])}")
+
+            st.markdown("### 💰 Final")
+            st.write(f"New In-hand: {format_inr(new)}")
+            st.write(f"Old In-hand: {format_inr(old)}")
+
 
 # ================= OFFER =================
 elif page == "Offer Comparison":
@@ -156,8 +83,8 @@ elif page == "Offer Comparison":
 
     elif ctc1 >= 100000 and ctc2 >= 100000:
 
-        new1, _, _, _ = calculate(ctc1)
-        new2, _, _, _ = calculate(ctc2)
+        new1, _ = calculate_salary(ctc1)
+        new2, _ = calculate_salary(ctc2)
 
         col1, col2 = st.columns(2)
         col1.metric("Offer 1 Monthly", format_inr(round(new1 / 12)))
@@ -191,7 +118,10 @@ elif page == "Tax Optimizer":
 
     elif ctc >= 100000:
 
-        new, old, _, _ = calculate(ctc, section_80c, hra, other)
+        result = calculate_salary(ctc, section_80c, hra, other)
+
+        new = result["new_inhand"]
+        old = result["old_inhand"]
 
         col1, col2 = st.columns(2)
         col1.metric("New Regime", format_inr(new))
@@ -218,12 +148,7 @@ elif page == "HRA Calculator":
 
     if salary > 0:
 
-        rent_annual = rent * 12
-        rent_minus_10 = max(rent_annual - (0.1 * salary), 0)
-        salary_limit = 0.5 * salary if is_metro else 0.4 * salary
-
-        exempt = min(hra_received, rent_minus_10, salary_limit)
-        taxable = max(hra_received - exempt, 0)
+        exempt, taxable = calculate_hra(salary, hra_received, rent, is_metro)
 
         st.success(f"Exempt HRA: {format_inr(exempt)}")
         st.error(f"Taxable HRA: {format_inr(taxable)}")
