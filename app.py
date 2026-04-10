@@ -70,7 +70,7 @@ st.markdown("""
 
     /* Dataframe */
     [data-testid="stDataFrame"] {
-        border-radius: 12px;
+        # border-radius: 12px;
         overflow: hidden;
     }
 
@@ -95,15 +95,15 @@ with st.sidebar:
         label_visibility="visible",
     )
 
-    st.markdown("---")
-    st.markdown("""
-    <div style='font-size:12px; color:#4b5563; padding:8px 0;'>
-        <p>📅 FY 2024–25 | AY 2025–26</p>
-        <p>🏛 New & Old regime comparison</p>
-        <p>✅ Surcharge & cess included</p>
-        <p>🔒 No data stored. Private & secure.</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # st.markdown("---")
+    # st.markdown("""
+    # <div style='font-size:12px; color:#4b5563; padding:8px 0;'>
+        # <p>📅 FY 2024–25 | AY 2025–26</p>
+        # <p>🏛 New & Old regime comparison</p>
+        # <p>✅ Surcharge & cess included</p>
+        # <p>🔒 No data stored. Private & secure.</p>
+    # </div>
+    # """, unsafe_allow_html=True)
 
 # ── PAGE ROUTING ─────────────────────────────────────────────
 if page == "Salary Calculator":
