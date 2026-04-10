@@ -18,4 +18,13 @@ def calculate_salary(ctc, section_80c=150000, hra=0, other=0):
     tax_old = old_tax(taxable_old)
     inhand_old = gross - employee_pf - tax_old - PROFESSIONAL_TAX
 
-    return round(inhand_new), round(inhand_old)
+    return {
+    "new_inhand": round(inhand_new),
+    "old_inhand": round(inhand_old),
+    "basic": round(basic),
+    "employer_pf": round(employer_pf),
+    "employee_pf": round(employee_pf),
+    "gross": round(gross),
+    "tax_new": round(tax_new),
+    "tax_old": round(tax_old)
+}
