@@ -34,6 +34,7 @@ page = st.sidebar.radio(
 
 PROFESSIONAL_TAX = 2400
 
+
 # ---------------- SURCHARGE ----------------
 def apply_surcharge(tax, income, regime):
     if income > 50000000:
@@ -48,53 +49,6 @@ def apply_surcharge(tax, income, regime):
         surcharge = 0
 
     return tax * (1 + surcharge)
-
-
-# ---------------- TAX BREAKDOWN ----------------
-def tax_breakdown(income, regime):
-
-    original_income = income
-    tax = 0
-
-    if regime == "new":
-        slabs = [
-            (400000, 0),(400000, 0.05),(400000, 0.10),
-            (400000, 0.15),(400000, 0.20),(400000, 0.25),
-            (float('inf'), 0.30)
-        ]
-    else:
-        slabs = [
-            (250000, 0),(250000, 0.05),
-            (500000, 0.20),(float('inf'), 0.30)
-        ]
-
-    temp_income = income
-
-    for limit, rate in slabs:
-        if temp_income > 0:
-            taxable = min(temp_income, limit)
-            tax += taxable * rate
-            temp_income -= taxable
-
-    base_tax = tax
-
-    if original_income > 50000000:
-        surcharge_rate = 0.25 if regime == "new" else 0.37
-    elif original_income > 20000000:
-        surcharge_rate = 0.25
-    elif original_income > 10000000:
-        surcharge_rate = 0.15
-    elif original_income > 5000000:
-        surcharge_rate = 0.10
-    else:
-        surcharge_rate = 0
-
-    surcharge = base_tax * surcharge_rate
-    cess = (base_tax + surcharge) * 0.04
-
-    total = base_tax + surcharge + cess
-
-    return base_tax, surcharge, cess, total
 
 
 # ---------------- TAX FUNCTIONS ----------------
@@ -158,7 +112,8 @@ def calculate(ctc, section_80c=150000, hra=0, other=0):
     tax_old = old_tax(taxable_old)
     inhand_old = gross - employee_pf - tax_old - PROFESSIONAL_TAX
 
-    return inhand_new, inhand_old, taxable_new, taxable_old
+    # ✅ FIX: ROUND AT SOURCE (prevents ₹1 mismatch)
+    return round(inhand_new), round(inhand_old), round(taxable_new), round(taxable_old)
 
 
 # ================= SALARY =================
@@ -166,25 +121,26 @@ if page == "Salary Calculator":
 
     ctc = st.number_input("Enter CTC (₹)", 0, step=50000)
 
-    if ctc > 0:
+    if ctc > 0 and ctc < 100000:
+        st.error("CTC should be minimum ₹1,00,000")
+
+    elif ctc >= 100000:
+
         new, old, _, _ = calculate(ctc)
 
         st.subheader("💸 Monthly In-Hand")
-        st.success(format_inr(new/12))
+        st.success(format_inr(round(new / 12)))
 
         col1, col2 = st.columns(2)
         col1.metric("New Regime", format_inr(new))
         col2.metric("Old Regime", format_inr(old))
 
-        new = round(new)
-        old = round(old)
-
         if new == old:
             st.info("⚖️ Both regimes give same result")
         elif new > old:
-            st.info(f"New regime better by {format_inr(new-old)}")
+            st.info(f"New regime better by {format_inr(new - old)}")
         else:
-            st.info(f"Old regime better by {format_inr(old-new)}")
+            st.info(f"Old regime better by {format_inr(old - new)}")
 
 
 # ================= OFFER =================
@@ -195,20 +151,24 @@ elif page == "Offer Comparison":
     ctc1 = st.number_input("Offer 1 CTC (₹)", 0, step=50000)
     ctc2 = st.number_input("Offer 2 CTC (₹)", 0, step=50000)
 
-    if ctc1 > 0 and ctc2 > 0:
+    if (ctc1 > 0 and ctc1 < 100000) or (ctc2 > 0 and ctc2 < 100000):
+        st.error("CTC should be minimum ₹1,00,000")
+
+    elif ctc1 >= 100000 and ctc2 >= 100000:
+
         new1, _, _, _ = calculate(ctc1)
         new2, _, _, _ = calculate(ctc2)
 
         col1, col2 = st.columns(2)
-        col1.metric("Offer 1 Monthly", format_inr(new1/12))
-        col2.metric("Offer 2 Monthly", format_inr(new2/12))
+        col1.metric("Offer 1 Monthly", format_inr(round(new1 / 12)))
+        col2.metric("Offer 2 Monthly", format_inr(round(new2 / 12)))
 
         diff = new2 - new1
 
         if diff > 0:
-            st.success(f"Offer 2 gives {format_inr(diff/12)}/month more")
+            st.success(f"Offer 2 gives {format_inr(round(diff / 12))}/month more")
         else:
-            st.success(f"Offer 1 gives {format_inr(abs(diff)/12)}/month more")
+            st.success(f"Offer 1 gives {format_inr(round(abs(diff) / 12))}/month more")
 
 
 # ================= TAX OPTIMIZER =================
@@ -226,11 +186,12 @@ elif page == "Tax Optimizer":
         hra = st.number_input("HRA Exemption (₹)", value=0)
         other = st.number_input("Other Deductions (₹)", value=0)
 
-    if ctc > 0:
+    if ctc > 0 and ctc < 100000:
+        st.error("CTC should be minimum ₹1,00,000")
 
-        new, old, taxable_new, taxable_old = calculate(ctc, section_80c, hra, other)
+    elif ctc >= 100000:
 
-        st.subheader("📊 Tax Comparison")
+        new, old, _, _ = calculate(ctc, section_80c, hra, other)
 
         col1, col2 = st.columns(2)
         col1.metric("New Regime", format_inr(new))
@@ -242,24 +203,6 @@ elif page == "Tax Optimizer":
             st.success(f"New Regime better by {format_inr(diff)}")
         else:
             st.success(f"Old Regime better by {format_inr(diff)}")
-
-        with st.expander("🔍 View Detailed Breakdown"):
-
-            st.markdown("### New Regime")
-            b, s, c, t = tax_breakdown(taxable_new, "new")
-            st.write(f"Base Tax: {format_inr(b)}")
-            st.write(f"Surcharge: {format_inr(s)}")
-            st.write(f"Cess: {format_inr(c)}")
-            st.success(f"Total Tax: {format_inr(t)}")
-
-            st.markdown("### Old Regime")
-            b, s, c, t = tax_breakdown(taxable_old, "old")
-            st.write(f"Base Tax: {format_inr(b)}")
-            st.write(f"Surcharge: {format_inr(s)}")
-            st.write(f"Cess: {format_inr(c)}")
-            st.success(f"Total Tax: {format_inr(t)}")
-
-        st.caption("Includes surcharge & cess as per latest rules")
 
 
 # ================= HRA =================
@@ -284,3 +227,14 @@ elif page == "HRA Calculator":
 
         st.success(f"Exempt HRA: {format_inr(exempt)}")
         st.error(f"Taxable HRA: {format_inr(taxable)}")
+
+
+# ---------------- FOOTER ----------------
+st.markdown("""
+<hr style="border:0.5px solid #2a2f36; margin-top:30px;">
+
+<div style='text-align:center; color:#9DA5B4; font-size:13px;'>
+🔒 No data stored. Private & secure.<br>
+💰 SaveTaxX — Real Salary. No Confusion.
+</div>
+""", unsafe_allow_html=True)
