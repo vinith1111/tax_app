@@ -176,7 +176,10 @@ if page == "Salary Calculator":
         col1.metric("New Regime", format_inr(new))
         col2.metric("Old Regime", format_inr(old))
 
-        if abs(new - old) < 1:
+        new = round(new)
+        old = round(old)
+
+        if new == old:
             st.info("⚖️ Both regimes give same result")
         elif new > old:
             st.info(f"New regime better by {format_inr(new-old)}")
