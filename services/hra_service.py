@@ -8,10 +8,11 @@ def calculate_hra(salary, hra_received, rent, is_metro):
     taxable = max(hra_received - exempt, 0)
 
     return {
-    "exempt": round(exempt),
-    "taxable": round(taxable),
-    "hra_received": round(hra_received),
-    "rent_annual": round(rent_annual),
-    "rent_minus_10": round(rent_minus_10),
-    "salary_limit": round(salary_limit)
-}
+        "exempt": round(exempt),
+        "taxable": round(taxable),
+        "hra_received": round(hra_received),
+        "rent_annual": round(rent_annual),
+        "rent_minus_10": round(rent_minus_10),
+        "salary_limit": round(salary_limit),
+        "salary": round(salary)
+    }
