@@ -33,39 +33,40 @@ def render():
         else:
             st.info(f"Old regime better by {format_inr(old - new)}")
 
-   with st.expander("📊 Salary Breakdown"):
+        # ✅ FIX: Proper indentation (inside elif)
+        with st.expander("📊 Salary Breakdown"):
 
-    st.markdown("### 💼 Salary Structure")
-    st.write(f"CTC: {format_inr(ctc)}")
-    st.write(f"Basic: {format_inr(result['basic'])}")
-    st.write(f"Employer PF: {format_inr(result['employer_pf'])}")
-    st.write(f"Gross: {format_inr(result['gross'])}")
+            st.markdown("### 💼 Salary Structure")
+            st.write(f"CTC: {format_inr(ctc)}")
+            st.write(f"Basic: {format_inr(result['basic'])}")
+            st.write(f"Employer PF: {format_inr(result['employer_pf'])}")
+            st.write(f"Gross: {format_inr(result['gross'])}")
 
-    st.markdown("### 🧾 Deductions")
-    st.write(f"Employee PF: {format_inr(result['employee_pf'])}")
-    st.write("Professional Tax: ₹2,400")
+            st.markdown("### 🧾 Deductions")
+            st.write(f"Employee PF: {format_inr(result['employee_pf'])}")
+            st.write("Professional Tax: ₹2,400")
 
-    # ---------- NEW REGIME ----------
-    st.markdown("### 🏛 Tax (New Regime)")
-    st.write(f"Base Tax: {format_inr(result['base_tax_new'])}")
-    st.write(f"Surcharge: {format_inr(result['surcharge_new'])}")
-    st.write(f"Cess (4%): {format_inr(result['cess_new'])}")
-    st.success(f"Total Tax: {format_inr(result['tax_new'])}")
+            # ---------- NEW REGIME ----------
+            st.markdown("### 🏛 Tax (New Regime)")
+            st.write(f"Base Tax: {format_inr(result['base_tax_new'])}")
+            st.write(f"Surcharge: {format_inr(result['surcharge_new'])}")
+            st.write(f"Cess (4%): {format_inr(result['cess_new'])}")
+            st.success(f"Total Tax: {format_inr(result['tax_new'])}")
 
-    if result['surcharge_new'] > 0:
-        st.caption("⚠️ Surcharge applied based on high income slab")
+            if result['surcharge_new'] > 0:
+                st.caption("⚠️ Surcharge applied based on high income slab")
 
-    # ---------- OLD REGIME ----------
-    st.markdown("### 🏛 Tax (Old Regime)")
-    st.write(f"Base Tax: {format_inr(result['base_tax_old'])}")
-    st.write(f"Surcharge: {format_inr(result['surcharge_old'])}")
-    st.write(f"Cess (4%): {format_inr(result['cess_old'])}")
-    st.success(f"Total Tax: {format_inr(result['tax_old'])}")
+            # ---------- OLD REGIME ----------
+            st.markdown("### 🏛 Tax (Old Regime)")
+            st.write(f"Base Tax: {format_inr(result['base_tax_old'])}")
+            st.write(f"Surcharge: {format_inr(result['surcharge_old'])}")
+            st.write(f"Cess (4%): {format_inr(result['cess_old'])}")
+            st.success(f"Total Tax: {format_inr(result['tax_old'])}")
 
-    if result['surcharge_old'] > 0:
-        st.caption("⚠️ Surcharge applied (up to 37% above ₹5Cr)")
+            if result['surcharge_old'] > 0:
+                st.caption("⚠️ Surcharge applied (up to 37% above ₹5Cr)")
 
-    # ---------- FINAL ----------
-    st.markdown("### 💰 Final In-Hand")
-    st.write(f"New Regime: {format_inr(result['new_inhand'])}")
-    st.write(f"Old Regime: {format_inr(result['old_inhand'])}")
+            # ---------- FINAL ----------
+            st.markdown("### 💰 Final In-Hand")
+            st.write(f"New Regime: {format_inr(result['new_inhand'])}")
+            st.write(f"Old Regime: {format_inr(result['old_inhand'])}")
