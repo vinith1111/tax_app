@@ -12,7 +12,8 @@ def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
     basic = ctc * 0.5
 
     # PF capped at ₹15,000/month basic
-    pf_annual = min(basic * PF_PERCENT, PF_CAP_MONTHLY * 12)
+    #pf_annual = min(basic * PF_PERCENT, PF_CAP_MONTHLY * 12)
+    pf_annual = basic * 0.12 #calculation based on actual basic
     employer_pf = pf_annual
     employee_pf = pf_annual
 
