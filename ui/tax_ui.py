@@ -8,7 +8,7 @@ def render():
     <div style='padding:18px 20px; border-radius:16px; margin-bottom:14px;
                 border:1px solid #2b4d83;
                 background:linear-gradient(120deg, rgba(30,58,138,0.35), rgba(14,23,43,0.95));'>
-        <p style='margin:0; color:#c8dbff; font-size:13px;'>💎 Premium planning</p>
+        <p style='margin:0; color:#c8dbff; font-size:13px;'>📈 Tax planning</p>
         <h3 style='margin:2px 0 6px;'>🎯 Tax Optimizer</h3>
         <p style='margin:0; color:#9fb0d6; font-size:13px;'>Build your deduction plan and compare regimes instantly.</p>
     </div>
