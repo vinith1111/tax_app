@@ -153,7 +153,7 @@ def render():
         with col2:
             st.markdown("**🏛 New Regime Tax**")
             st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
-            st.markdown(f"- Status: `{result['threshold_message']}`")
+            # st.markdown(f"- Status: `{result['threshold_message']}`")
             st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
             st.markdown(f"- Surcharge: `{format_inr(result['surcharge_new'])}`")
             st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
