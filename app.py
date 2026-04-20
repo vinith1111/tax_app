@@ -8,7 +8,7 @@ from ui.hra_ui import render as hra_page
 st.set_page_config(
     page_title="SaveTaxX",
     page_icon="💰",
-    layout="wide",  # CHANGED (from centered → wide)
+    layout="wide",
     initial_sidebar_state="expanded",
 )
 
