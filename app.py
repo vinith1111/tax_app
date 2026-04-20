@@ -108,6 +108,18 @@ st.markdown("""
         color: var(--text-primary);
     }
 
+    .premium-chip {
+        display:inline-flex;
+        align-items:center;
+        gap:8px;
+        background: linear-gradient(120deg, rgba(37,99,235,0.24), rgba(14,116,144,0.22));
+        border: 1px solid #33538f;
+        color: #c9dbff;
+        border-radius: 999px;
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+
     /* Hide streamlit branding */
     #MainMenu, footer {visibility: hidden;}
 </style>
@@ -122,6 +134,9 @@ with st.sidebar:
         <span style='font-size:34px;'>💰</span>
         <h2 style='color:#e5e7eb; margin:8px 0 4px; font-size:21px;'>SaveTaxX</h2>
         <p style='color:#9fb0d6; font-size:12px; margin:0;'>Real Salary. No Confusion.</p>
+        <div style='margin-top:10px;'>
+            <span class='premium-chip'>✨ Premium Planner UX</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
