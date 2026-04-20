@@ -131,18 +131,18 @@ def render():
             (f"3️⃣ {city_label} of Basic", format_inr(result["salary_limit"])),
         ]
 
-        for label, value in rows:
-            st.markdown(f"- {label}: `{value}`")
+        # for label, value in rows:
+        #     st.markdown(f"- {label}: `{value}`")
 
-        st.markdown("---")
-        st.markdown(f"**→ Minimum = Exempt HRA: `{format_inr(result['exempt'])}` (annual)**")
+        # st.markdown("---")
+        # st.markdown(f"**→ Minimum = Exempt HRA: `{format_inr(result['exempt'])}` (annual)**")
 
-        st.markdown(f"#### 📥 Inputs Used ({period} values)")
-        st.markdown(f"- Basic: `{format_inr(basic_input)}`")
-        st.markdown(f"- HRA Received: `{format_inr(hra_input)}`")
-        st.markdown(f"- Rent Paid: `{format_inr(rent_input)}`")
+        # st.markdown(f"#### 📥 Inputs Used ({period} values)")
+        # st.markdown(f"- Basic: `{format_inr(basic_input)}`")
+        # st.markdown(f"- HRA Received: `{format_inr(hra_input)}`")
+        # st.markdown(f"- Rent Paid: `{format_inr(rent_input)}`")
 
-        st.markdown("#### 📤 Annualized Values Used in Formula")
-        st.markdown(f"- Annual Basic: `{format_inr(result['salary'])}`")
-        st.markdown(f"- Annual HRA Received: `{format_inr(result['hra_received'])}`")
-        st.markdown(f"- Annual Rent Paid: `{format_inr(result['rent_annual'])}`")
+        # st.markdown("#### 📤 Annualized Values Used in Formula")
+        # st.markdown(f"- Annual Basic: `{format_inr(result['salary'])}`")
+        # st.markdown(f"- Annual HRA Received: `{format_inr(result['hra_received'])}`")
+        # st.markdown(f"- Annual Rent Paid: `{format_inr(result['rent_annual'])}`")
