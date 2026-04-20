@@ -104,6 +104,12 @@ def render():
         var_name="Component",
         value_name="Amount",
     )
+    component_order = ["In-Hand", "Income Tax", "Employee PF", "Professional Tax"]
+    chart_long["Component"] = pd.Categorical(
+        chart_long["Component"],
+        categories=component_order,
+        ordered=True,
+    )
 
     chart = (
         alt.Chart(chart_long)
@@ -113,8 +119,9 @@ def render():
             y=alt.Y("Regime:N", title=""),
             color=alt.Color(
                 "Component:N",
+                sort=component_order,
                 scale=alt.Scale(
-                    domain=["In-Hand", "Income Tax", "Employee PF", "Professional Tax"],
+                    domain=component_order,
                     range=["#22c55e", "#ef4444", "#f59e0b", "#6b7280"],
                 ),
             ),
@@ -123,10 +130,6 @@ def render():
                 alt.Tooltip("Component:N"),
                 alt.Tooltip("Amount:Q", format=","),
             ],
-            order=alt.Order(
-                "Component:N",
-                sort=["In-Hand", "Income Tax", "Employee PF", "Professional Tax"],
-            ),
         )
         .properties(height=180)
     )
@@ -150,6 +153,7 @@ def render():
         with col2:
             st.markdown("**🏛 New Regime Tax**")
             st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
+            st.markdown(f"- Status: `{result['threshold_message']}`")
             st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
             st.markdown(f"- Surcharge: `{format_inr(result['surcharge_new'])}`")
             st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
@@ -169,9 +173,9 @@ def render():
                     </div>
                     <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
                         You crossed <b>₹12L</b> by 
-                        <span style="color:#22c55e;">₹{result['excess_income']}</span><br>
+                        <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
                         Tax reduced by 
-                        <span style="color:#22c55e;">₹{result['marginal_relief_savings']}</span>
+                        <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
