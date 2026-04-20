@@ -134,8 +134,8 @@ def render():
         for label, value in rows:
             st.markdown(f"- {label}: `{value}`")
 
-        st.markdown("---")
-        st.markdown(f"**→ Minimum = Exempt HRA: `{format_inr(result['exempt'])}` (annual)**")
+        # st.markdown("---")
+        # st.markdown(f"**Minimum = Exempt HRA: `{format_inr(result['exempt'])}`**")
 
         # st.markdown(f"#### 📥 Inputs Used ({period} values)")
         # st.markdown(f"- Basic: `{format_inr(basic_input)}`")
