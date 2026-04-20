@@ -3,3 +3,4 @@ STD_DEDUCTION_NEW = 75000
 STD_DEDUCTION_OLD = 50000
 PF_PERCENT = 0.12
 PF_CAP_MONTHLY = 15000  # PF capped at ₹15,000/month basic
+PF_INTEREST_RATE = 0.0825  # Estimated EPF annual interest rate (8.25%)

@@ -5,6 +5,7 @@ from utils.constants import (
     STD_DEDUCTION_OLD,
     PF_PERCENT,
     PF_CAP_MONTHLY,
+    PF_INTEREST_RATE,
 )
 
 
@@ -16,6 +17,8 @@ def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
     pf_annual = basic * 0.12 #calculation based on actual basic
     employer_pf = pf_annual
     employee_pf = pf_annual
+    pf_taxable_contribution_excess = max(employee_pf - 250_000, 0)
+    taxable_pf_interest = pf_taxable_contribution_excess * PF_INTEREST_RATE
 
     gross = ctc - employer_pf
 
@@ -91,6 +94,8 @@ def calculate_salary(ctc, section_80c=150_000, hra=0, other=0):
         "employer_pf": round(employer_pf),
         "employee_pf": round(employee_pf),
         "gross": round(gross),
+        "pf_taxable_contribution_excess": round(pf_taxable_contribution_excess),
+        "taxable_pf_interest": round(taxable_pf_interest),
 
         # New regime tax breakdown
         "taxable_new": round(taxable_new),
