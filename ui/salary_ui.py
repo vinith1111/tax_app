@@ -104,6 +104,12 @@ def render():
         var_name="Component",
         value_name="Amount",
     )
+    component_order = ["In-Hand", "Income Tax", "Employee PF", "Professional Tax"]
+    chart_long["Component"] = pd.Categorical(
+        chart_long["Component"],
+        categories=component_order,
+        ordered=True,
+    )
 
     chart = (
         alt.Chart(chart_long)
@@ -113,8 +119,9 @@ def render():
             y=alt.Y("Regime:N", title=""),
             color=alt.Color(
                 "Component:N",
+                sort=component_order,
                 scale=alt.Scale(
-                    domain=["In-Hand", "Income Tax", "Employee PF", "Professional Tax"],
+                    domain=component_order,
                     range=["#22c55e", "#ef4444", "#f59e0b", "#6b7280"],
                 ),
             ),
@@ -123,10 +130,6 @@ def render():
                 alt.Tooltip("Component:N"),
                 alt.Tooltip("Amount:Q", format=","),
             ],
-            order=alt.Order(
-                "Component:N",
-                sort=["In-Hand", "Income Tax", "Employee PF", "Professional Tax"],
-            ),
         )
         .properties(height=180)
     )
