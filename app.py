@@ -5,10 +5,12 @@ from ui.offer_ui import render as offer_page
 from ui.tax_ui import render as tax_page
 from ui.hra_ui import render as hra_page
 
+MENU_OPTIONS = ["Salary Calculator", "Offer Comparison", "Tax Optimizer", "HRA Calculator"]
+
 st.set_page_config(
     page_title="SaveTaxX",
     page_icon="💰",
-    layout="wide",  # CHANGED (from centered → wide)
+    layout="wide",
     initial_sidebar_state="expanded",
 )
 
@@ -140,7 +142,7 @@ with st.sidebar:
 
     page = st.radio(
         "📂 Menu",
-        ["Salary Calculator", "Offer Comparison", "Tax Optimizer", "HRA Calculator"],
+        MENU_OPTIONS,
         label_visibility="visible",
     )
 
