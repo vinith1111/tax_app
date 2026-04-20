@@ -123,7 +123,7 @@ def render():
     with st.expander("🧮 How is this calculated?"):
         city_label = "Metro (50%)" if is_metro else "Non-Metro (40%)"
 
-        st.markdown("HRA exemption = **minimum** of these three annual values:")
+        st.markdown("HRA exemption = **minimum** of these 3 values:")
 
         rows = [
             ("1️⃣ Actual HRA received", format_inr(result["hra_received"])),
