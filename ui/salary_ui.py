@@ -190,3 +190,10 @@ def render():
     # Outside expander
     if result["surcharge_new"] > 0:
         st.warning("⚠️ Surcharge applied — income exceeds ₹50L")
+
+    if result["pf_taxable_contribution_excess"] > 0:
+        st.info(
+            f"🧾 Employee PF contribution above ₹2.5L can create taxable interest. "
+            f"Excess contribution: `{format_inr(result['pf_taxable_contribution_excess'])}` · "
+            f"Estimated taxable interest (@8.25%): `{format_inr(result['taxable_pf_interest'])}` per year."
+        )
