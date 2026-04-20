@@ -46,8 +46,8 @@ def render():
             help=f"Actual {unit_label.lower()} rent you pay",
         )
 
-    if basic_input <= 0:
-        st.info("👆 Enter your basic salary to calculate HRA exemption.")
+    if basic_input <= 0 or hra_input <= 0 or rent_input <= 0:
+        st.info("👆 Enter basic salary, HRA received, and rent paid to calculate HRA exemption.")
         return
 
     factor = 12 if is_monthly else 1
@@ -61,9 +61,8 @@ def render():
     st.markdown("---")
     c1, c2, c3 = st.columns(3)
 
-    output_factor = 12 if is_monthly else 1
-    exempt_display = round(result["exempt"] / output_factor)
-    taxable_display = round(result["taxable"] / output_factor)
+    exempt_display = result["exempt"]
+    taxable_display = result["taxable"]
 
     with c1:
         st.markdown(
@@ -73,7 +72,7 @@ def render():
                         border:1px solid #4ade80;'>
                 <p style='color:#bbf7d0; font-size:12px; margin:0 0 4px;'>✅ Exempt HRA</p>
                 <p style='color:#4ade80; font-size:24px; font-weight:700; margin:0;'>{format_inr(exempt_display)}</p>
-                <p style='color:#86efac; font-size:11px; margin:4px 0 0;'>{period} · Tax-free</p>
+                <p style='color:#86efac; font-size:11px; margin:4px 0 0;'>Annual · Tax-free</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -87,7 +86,7 @@ def render():
                         border:1px solid {"#f87171" if result["taxable"] > 0 else "#374151"};'>
                 <p style='color:{"#fecaca" if result["taxable"] > 0 else "#9ca3af"}; font-size:12px; margin:0 0 4px;'>{"⚠️ Taxable HRA" if result["taxable"] > 0 else "Taxable HRA"}</p>
                 <p style='color:{"#f87171" if result["taxable"] > 0 else "#e5e7eb"}; font-size:24px; font-weight:700; margin:0;'>{format_inr(taxable_display)}</p>
-                <p style='color:{"#fca5a5" if result["taxable"] > 0 else "#6b7280"}; font-size:11px; margin:4px 0 0;'>{period} · Added to income</p>
+                <p style='color:{"#fca5a5" if result["taxable"] > 0 else "#6b7280"}; font-size:11px; margin:4px 0 0;'>Annual · Added to income</p>
             </div>
             """,
             unsafe_allow_html=True,
@@ -116,7 +115,7 @@ def render():
         st.error("❌ No HRA exemption — you may not be paying enough rent or HRA is zero.")
     else:
         st.info(
-            f"💡 {format_inr(exempt_display)} of your {period.lower()} HRA is tax-free. "
+            f"💡 {format_inr(exempt_display)} of your annual HRA is tax-free. "
             f"The remaining {format_inr(taxable_display)} is added to taxable income."
         )
 
