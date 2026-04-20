@@ -4,7 +4,7 @@ from utils.formatter import format_inr, effective_tax_rate
 
 
 def render():
-    st.markdown("""
+    header_html = """
     <div style='padding:18px 20px; border-radius:16px; margin-bottom:14px;
                 border:1px solid #2b4d83;
                 background:linear-gradient(120deg, rgba(30,58,138,0.35), rgba(14,23,43,0.95));'>
@@ -12,7 +12,8 @@ def render():
         <h3 style='margin:2px 0 6px;'>🎯 Tax Optimizer</h3>
         <p style='margin:0; color:#9fb0d6; font-size:13px;'>Build your deduction plan and compare regimes instantly.</p>
     </div>
-    """, unsafe_allow_html=True)
+    """
+    st.markdown(header_html, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
