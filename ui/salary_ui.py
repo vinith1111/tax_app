@@ -150,6 +150,7 @@ def render():
         with col2:
             st.markdown("**🏛 New Regime Tax**")
             st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
+            st.markdown(f"- Status: `{result['threshold_message']}`")
             st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
             st.markdown(f"- Surcharge: `{format_inr(result['surcharge_new'])}`")
             st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
@@ -169,9 +170,9 @@ def render():
                     </div>
                     <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
                         You crossed <b>₹12L</b> by 
-                        <span style="color:#22c55e;">₹{result['excess_income']}</span><br>
+                        <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
                         Tax reduced by 
-                        <span style="color:#22c55e;">₹{result['marginal_relief_savings']}</span>
+                        <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
