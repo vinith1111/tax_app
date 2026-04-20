@@ -135,7 +135,7 @@ with st.sidebar:
         <h2 style='color:#e5e7eb; margin:8px 0 4px; font-size:21px;'>SaveTaxX</h2>
         <p style='color:#9fb0d6; font-size:12px; margin:0;'>Real Salary. No Confusion.</p>
         <div style='margin-top:10px;'>
-            <span class='premium-chip'>✨ Premium Planner UX</span>
+            <span class='premium-chip'>✨ Your Tax Planner</span>
         </div>
     </div>
     """, unsafe_allow_html=True)
