@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 from services.salary_service import calculate_salary
+from utils.constants import PROFESSIONAL_TAX
 from utils.formatter import format_inr, format_lpa, effective_tax_rate
 from validators.input_validator import validate_ctc
 
@@ -88,23 +90,45 @@ def render():
     st.markdown("---")
     st.markdown("#### 📊 Salary Breakdown Comparison")
 
-    chart_data = pd.DataFrame({
-        "Component": ["In-Hand", "Income Tax", "Employee PF", "Professional Tax"],
-        "New Regime (₹)": [
-            result["new_inhand"],
-            result["tax_new"],
-            result["employee_pf"],
-            2400,
-        ],
-        "Old Regime (₹)": [
-            result["old_inhand"],
-            result["tax_old"],
-            result["employee_pf"],
-            2400,
-        ],
-    }).set_index("Component")
+    chart_data = pd.DataFrame(
+        {
+            "Regime": ["New Regime", "Old Regime"],
+            "In-Hand": [result["new_inhand"], result["old_inhand"]],
+            "Income Tax": [result["tax_new"], result["tax_old"]],
+            "Employee PF": [result["employee_pf"], result["employee_pf"]],
+            "Professional Tax": [PROFESSIONAL_TAX, PROFESSIONAL_TAX],
+        }
+    )
 
-    st.bar_chart(chart_data, height=280)
+    chart_long = chart_data.melt(
+        id_vars="Regime",
+        var_name="Component",
+        value_name="Amount",
+    )
+
+    chart = (
+        alt.Chart(chart_long)
+        .mark_bar()
+        .encode(
+            x=alt.X("Amount:Q", title="Amount (₹)", stack="zero"),
+            y=alt.Y("Regime:N", title=""),
+            color=alt.Color(
+                "Component:N",
+                scale=alt.Scale(
+                    domain=["In-Hand", "Income Tax", "Employee PF", "Professional Tax"],
+                    range=["#22c55e", "#ef4444", "#f59e0b", "#6b7280"],
+                ),
+            ),
+            tooltip=[
+                alt.Tooltip("Regime:N"),
+                alt.Tooltip("Component:N"),
+                alt.Tooltip("Amount:Q", format=","),
+            ],
+        )
+        .properties(height=180)
+    )
+
+    st.altair_chart(chart, use_container_width=True)
 
     # ── DETAILED BREAKDOWN ──────────────────────────────────────
     with st.expander("🔍 Full Breakdown"):
@@ -118,7 +142,7 @@ def render():
             st.markdown(f"- Employer PF: `{format_inr(result['employer_pf'])}`")
             st.markdown(f"- Gross: `{format_inr(result['gross'])}`")
             st.markdown(f"- Employee PF: `{format_inr(result['employee_pf'])}`")
-            st.markdown(f"- Professional Tax: `₹2,400`")
+            st.markdown(f"- Professional Tax: `{format_inr(PROFESSIONAL_TAX)}`")
 
         with col2:
             st.markdown("**🏛 New Regime Tax**")
