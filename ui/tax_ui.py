@@ -4,8 +4,15 @@ from utils.formatter import format_inr, effective_tax_rate
 
 
 def render():
-    st.markdown("### 🎯 Tax Optimizer")
-    st.caption("See how deductions under the old regime reduce your tax liability.")
+    st.markdown("""
+    <div style='padding:18px 20px; border-radius:16px; margin-bottom:14px;
+                border:1px solid #2b4d83;
+                background:linear-gradient(120deg, rgba(30,58,138,0.35), rgba(14,23,43,0.95));'>
+        <p style='margin:0; color:#c8dbff; font-size:13px;'>💎 Premium planning</p>
+        <h3 style='margin:2px 0 6px;'>🎯 Tax Optimizer</h3>
+        <p style='margin:0; color:#9fb0d6; font-size:13px;'>Build your deduction plan and compare regimes instantly.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -83,9 +90,9 @@ def render():
     st.markdown("<div style='margin-top:8px'></div>", unsafe_allow_html=True)
 
     if diff > 0:
-        st.success(f"🏆 Old regime (with deductions) saves **{format_inr(diff)}/year** over new regime")
+        st.success(f"🏆 Your plan works: old regime saves **{format_inr(diff)}/year** over new regime")
     elif diff < 0:
-        st.info(f"💡 New regime is still better by **{format_inr(abs(diff))}/year** even with these deductions")
+        st.info(f"💡 New regime remains better by **{format_inr(abs(diff))}/year** even with this plan")
     else:
         st.info("⚖️ Both regimes give the same result with these deductions.")
 
