@@ -29,38 +29,38 @@ def _salary_breakdown_df(ctc, result):
     )
 
 
-def _payslip_data(ctc, result, regime):
-    tax_key = "tax_new" if regime == "new" else "tax_old"
-    regime_label = "New Regime" if regime == "new" else "Old Regime"
-
+def _payslip_data(ctc, result):
     gross_monthly = round(result["gross"] / 12)
     basic_monthly = round(result["basic"] / 12)
     allowances_monthly = max(gross_monthly - basic_monthly, 0)
     employee_pf_monthly = round(result["employee_pf"] / 12)
     professional_tax_monthly = 200
-    tds_monthly = round(result[tax_key] / 12)
-    deductions_monthly = employee_pf_monthly + professional_tax_monthly + tds_monthly
-    net_pay_monthly = gross_monthly - deductions_monthly
+    tds_new_monthly = round(result["tax_new"] / 12)
+    tds_old_monthly = round(result["tax_old"] / 12)
+    deductions_new = employee_pf_monthly + professional_tax_monthly + tds_new_monthly
+    deductions_old = employee_pf_monthly + professional_tax_monthly + tds_old_monthly
+    net_pay_new = gross_monthly - deductions_new
+    net_pay_old = gross_monthly - deductions_old
 
     return {
-        "regime_label": regime_label,
         "gross_monthly": gross_monthly,
-        "net_pay_monthly": net_pay_monthly,
+        "annual_ctc": ctc,
         "earnings": [
-            ("Basic Pay", basic_monthly),
-            ("Other Allowances", allowances_monthly),
+            ("Basic Pay", basic_monthly, basic_monthly),
+            ("Other Allowances", allowances_monthly, allowances_monthly),
         ],
         "deductions": [
-            ("Employee PF", employee_pf_monthly),
-            ("Professional Tax", professional_tax_monthly),
-            ("TDS", tds_monthly),
+            ("Employee PF", employee_pf_monthly, employee_pf_monthly),
+            ("Professional Tax", professional_tax_monthly, professional_tax_monthly),
+            ("TDS", tds_new_monthly, tds_old_monthly),
         ],
         "summary": [
-            ("Gross Earnings", gross_monthly),
-            ("Total Deductions", deductions_monthly),
-            ("Net Pay", net_pay_monthly),
+            ("Gross Earnings", gross_monthly, gross_monthly),
+            ("Total Deductions", deductions_new, deductions_old),
+            ("Net Pay", net_pay_new, net_pay_old),
         ],
-        "annual_ctc": ctc,
+        "net_pay_new": net_pay_new,
+        "net_pay_old": net_pay_old,
     }
 
 
@@ -68,16 +68,19 @@ def _text_pdf_bytes(title, lines):
     def _escape_pdf_text(value):
         return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
+    def _pdf_safe(value):
+        return value.replace("₹", "Rs. ")
+
     content_lines = [
         "BT",
         "/F1 11 Tf",
         "50 790 Td",
-        f"({_escape_pdf_text(title)}) Tj",
+        f"({_escape_pdf_text(_pdf_safe(title))}) Tj",
         "0 -20 Td",
     ]
 
     for line in lines:
-        escaped = _escape_pdf_text(line)
+        escaped = _escape_pdf_text(_pdf_safe(line))
         content_lines.append(f"({escaped}) Tj")
         content_lines.append("0 -14 Td")
 
@@ -123,7 +126,7 @@ def _build_docx_table(rows):
     return (
         "<w:tbl>"
         "<w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/></w:tblPr>"
-        "<w:tblGrid><w:gridCol w:w=\"5200\"/><w:gridCol w:w=\"2400\"/></w:tblGrid>"
+        "<w:tblGrid><w:gridCol w:w=\"4200\"/><w:gridCol w:w=\"2100\"/><w:gridCol w:w=\"2100\"/></w:tblGrid>"
         f"{''.join(table_rows)}"
         "</w:tbl>"
     )
@@ -131,14 +134,14 @@ def _build_docx_table(rows):
 
 def _docx_bytes(title, payslip):
     brand_name = "SaveTaxX"
-    earnings_rows = [("Earnings", "Amount (₹)")] + [
-        (name, format_inr(amount)) for name, amount in payslip["earnings"]
+    earnings_rows = [("Earnings", "New Regime", "Old Regime")] + [
+        (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]
     ]
-    deduction_rows = [("Deductions", "Amount (₹)")] + [
-        (name, format_inr(amount)) for name, amount in payslip["deductions"]
+    deduction_rows = [("Deductions", "New Regime", "Old Regime")] + [
+        (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["deductions"]
     ]
-    summary_rows = [("Summary", "Amount (₹)")] + [
-        (name, format_inr(amount)) for name, amount in payslip["summary"]
+    summary_rows = [("Summary", "New Regime", "Old Regime")] + [
+        (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]
     ]
 
     document_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -161,10 +164,10 @@ def _docx_bytes(title, payslip):
   <w:body>
     <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>{escape(brand_name)}</w:t></w:r></w:p>
     <w:p><w:r><w:t>{escape(title)}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Payslip Generated Under: {escape(payslip['regime_label'])}</w:t></w:r></w:p>
     <w:p><w:r><w:t>Annual CTC: {escape(format_inr(payslip['annual_ctc']))}</w:t></w:r></w:p>
     <w:p><w:r><w:t>Monthly Gross Pay: {escape(format_inr(payslip['gross_monthly']))}</w:t></w:r></w:p>
-    <w:p><w:r><w:t>Monthly Net Pay: {escape(format_inr(payslip['net_pay_monthly']))}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Monthly Net Pay (New): {escape(format_inr(payslip['net_pay_new']))}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Monthly Net Pay (Old): {escape(format_inr(payslip['net_pay_old']))}</w:t></w:r></w:p>
     {_build_docx_table(earnings_rows)}
     <w:p><w:r><w:t> </w:t></w:r></w:p>
     {_build_docx_table(deduction_rows)}
@@ -279,57 +282,51 @@ def render():
     breakdown_df = _salary_breakdown_df(ctc, result)
 
     st.markdown("#### 📥 Download Salary Breakdown")
-    #st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
-    payslip_regime = st.radio(
-        "Payslip Tax Regime",
-        options=["Recommended", "New Regime", "Old Regime"],
-        horizontal=True,
-    )
-    selected_regime = "new" if (payslip_regime == "Recommended" and winner == "new") or payslip_regime == "New Regime" else "old"
-    payslip = _payslip_data(ctc, result, selected_regime)
+    st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
+    payslip = _payslip_data(ctc, result)
 
-    document_title = f"Salary Payslip - CTC {format_inr(ctc)}"
+    document_title = f"Salary Payslip (New vs Old) - CTC {format_inr(ctc)}"
     doc_filename = f"salary_breakdown_{int(ctc)}.docx"
     pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
 
-    row_template = "{:<26} {:>18}"
+    row_template = "{} | {} | {}"
     text_lines = [
         "SaveTaxX",
-        f"Regime: {payslip['regime_label']}",
         f"Annual CTC: {format_inr(payslip['annual_ctc'])}",
         f"Monthly Gross Pay: {format_inr(payslip['gross_monthly'])}",
-        f"Monthly Net Pay: {format_inr(payslip['net_pay_monthly'])}",
+        f"Monthly Net Pay (New): {format_inr(payslip['net_pay_new'])}",
+        f"Monthly Net Pay (Old): {format_inr(payslip['net_pay_old'])}",
         "",
         "EARNINGS",
-        row_template.format("Component", "Amount"),
-        "-" * 46,
+        row_template.format("Component", "New", "Old"),
+        "-" * 54,
     ]
-    for name, amount in payslip["earnings"]:
-        text_lines.append(row_template.format(name[:26], format_inr(amount)))
-    text_lines.extend(["", "DEDUCTIONS", row_template.format("Component", "Amount"), "-" * 46])
-    for name, amount in payslip["deductions"]:
-        text_lines.append(row_template.format(name[:26], format_inr(amount)))
-    text_lines.extend(["", "SUMMARY", row_template.format("Component", "Amount"), "-" * 46])
-    for name, amount in payslip["summary"]:
-        text_lines.append(row_template.format(name[:26], format_inr(amount)))
+    for name, new_amount, old_amount in payslip["earnings"]:
+        text_lines.append(row_template.format(name, format_inr(new_amount), format_inr(old_amount)))
+    text_lines.extend(["", "DEDUCTIONS", row_template.format("Component", "New", "Old"), "-" * 54])
+    for name, new_amount, old_amount in payslip["deductions"]:
+        text_lines.append(row_template.format(name, format_inr(new_amount), format_inr(old_amount)))
+    text_lines.extend(["", "SUMMARY", row_template.format("Component", "New", "Old"), "-" * 54])
+    for name, new_amount, old_amount in payslip["summary"]:
+        text_lines.append(row_template.format(name, format_inr(new_amount), format_inr(old_amount)))
 
-    dl1, dl2 = st.columns(2)
-    with dl1:
-        st.download_button(
-            "📄 Download Payslip DOCX",
-            data=_docx_bytes(document_title, payslip),
-            file_name=doc_filename,
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            use_container_width=True,
-        )
-    with dl2:
-        st.download_button(
-            "🧾 Download Payslip PDF",
-            data=_text_pdf_bytes(document_title, text_lines),
-            file_name=pdf_filename,
-            mime="application/pdf",
-            use_container_width=True,
-        )
+    file_type = st.selectbox("Download Format", options=["PDF", "DOCX"])
+    if file_type == "PDF":
+        file_name = pdf_filename
+        mime = "application/pdf"
+        payload = _text_pdf_bytes(document_title, text_lines)
+    else:
+        file_name = doc_filename
+        mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        payload = _docx_bytes(document_title, payslip)
+
+    st.download_button(
+        f"⬇️ Download Payslip ({file_type})",
+        data=payload,
+        file_name=file_name,
+        mime=mime,
+        use_container_width=True,
+    )
 
     # ── DETAILED BREAKDOWN ──────────────────────────────────────
     with st.expander("🔍 Full Breakdown"):
