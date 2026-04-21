@@ -279,7 +279,7 @@ def render():
     breakdown_df = _salary_breakdown_df(ctc, result)
 
     st.markdown("#### 📥 Download Salary Breakdown")
-    st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
+    #st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
     payslip_regime = st.radio(
         "Payslip Tax Regime",
         options=["Recommended", "New Regime", "Old Regime"],
