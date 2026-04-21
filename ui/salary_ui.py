@@ -198,7 +198,7 @@ def _docx_bytes(title, payslip):
 
 
 def render():
-    st.markdown("### 💼 Salary Calculator")
+    st.markdown("### Salary Calculator")
     st.caption("Enter your CTC to see exact in-hand salary under both tax regimes.")
 
     ctc = st.number_input(
@@ -278,8 +278,8 @@ def render():
 
     breakdown_df = _salary_breakdown_df(ctc, result)
 
-    st.markdown("#### 📥 Download Salary Breakdown")
-    st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
+    st.markdown("#### Download Salary Breakdown")
+    # st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
     payslip_regime = st.radio(
         "Payslip Tax Regime",
         options=["Recommended", "New Regime", "Old Regime"],
@@ -316,7 +316,7 @@ def render():
     dl1, dl2 = st.columns(2)
     with dl1:
         st.download_button(
-            "📄 Download Payslip DOCX",
+            "Download Payslip DOCX",
             data=_docx_bytes(document_title, payslip),
             file_name=doc_filename,
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -324,7 +324,7 @@ def render():
         )
     with dl2:
         st.download_button(
-            "🧾 Download Payslip PDF",
+            "Download Payslip PDF",
             data=_text_pdf_bytes(document_title, text_lines),
             file_name=pdf_filename,
             mime="application/pdf",
@@ -332,12 +332,12 @@ def render():
         )
 
     # ── DETAILED BREAKDOWN ──────────────────────────────────────
-    with st.expander("🔍 Full Breakdown"):
+    with st.expander("Full Breakdown"):
 
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown("**💼 Salary Structure**")
+            st.markdown("**Salary Structure**")
             st.markdown(f"- CTC: `{format_inr(ctc)}`")
             st.markdown(f"- Basic (50%): `{format_inr(result['basic'])}`")
             st.markdown(f"- Employer PF: `{format_inr(result['employer_pf'])}`")
@@ -346,7 +346,7 @@ def render():
             st.markdown(f"- Professional Tax: `₹2,400`")
 
         with col2:
-            st.markdown("**🏛 New Regime Tax**")
+            st.markdown("**New Regime Tax**")
             st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
             # st.markdown(f"- Status: `{result['threshold_message']}`")
             st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
@@ -364,7 +364,7 @@ def render():
                     margin-top:12px;
                 ">
                     <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
-                        🧠 Marginal Relief Insight
+                        Marginal Relief Insight
                     </div>
                     <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
                         You crossed <b>₹12L</b> by 
@@ -375,7 +375,7 @@ def render():
                 </div>
                 """, unsafe_allow_html=True)
 
-            st.markdown("**🏛 Old Regime Tax**")
+            st.markdown("**Old Regime Tax**")
             st.markdown(f"- Taxable Income: `{format_inr(result['taxable_old'])}`")
             st.markdown(f"- Base Tax: `{format_inr(result['base_tax_old'])}`")
             st.markdown(f"- Surcharge: `{format_inr(result['surcharge_old'])}`")
@@ -388,7 +388,7 @@ def render():
 
     if result["pf_taxable_contribution_excess"] > 0:
         st.info(
-            f"🧾 Employee PF contribution above ₹2.5L can create taxable interest. "
+            f"Employee PF contribution above ₹2.5L can create taxable interest. "
             f"Excess contribution: `{format_inr(result['pf_taxable_contribution_excess'])}` · "
             f"Estimated taxable interest (@8.25%): `{format_inr(result['taxable_pf_interest'])}` per year."
         )
