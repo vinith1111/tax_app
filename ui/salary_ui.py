@@ -1,9 +1,200 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+from io import BytesIO
+from xml.sax.saxutils import escape
+from zipfile import ZIP_DEFLATED, ZipFile
 from services.salary_service import calculate_salary
 from utils.formatter import format_inr, format_lpa, effective_tax_rate
 from validators.input_validator import validate_ctc
+
+
+def _salary_breakdown_df(ctc, result):
+    return pd.DataFrame(
+        [
+            ["CTC", format_inr(ctc), "-"],
+            ["Basic (50%)", format_inr(result["basic"]), "-"],
+            ["Employer PF", format_inr(result["employer_pf"]), "-"],
+            ["Gross Salary", format_inr(result["gross"]), "-"],
+            ["Employee PF", format_inr(result["employee_pf"]), format_inr(result["employee_pf"])],
+            ["Professional Tax", "₹2,400", "₹2,400"],
+            ["Taxable Income", format_inr(result["taxable_new"]), format_inr(result["taxable_old"])],
+            ["Base Tax", format_inr(result["base_tax_new"]), format_inr(result["base_tax_old"])],
+            ["Surcharge", format_inr(result["surcharge_new"]), format_inr(result["surcharge_old"])],
+            ["Cess (4%)", format_inr(result["cess_new"]), format_inr(result["cess_old"])],
+            ["Total Tax", format_inr(result["tax_new"]), format_inr(result["tax_old"])],
+            ["Annual In-Hand", format_inr(result["new_inhand"]), format_inr(result["old_inhand"])],
+            ["Monthly In-Hand", format_inr(round(result["new_inhand"] / 12)), format_inr(round(result["old_inhand"] / 12))],
+        ],
+        columns=["Component", "New Regime", "Old Regime"],
+    )
+
+
+def _payslip_data(ctc, result, regime):
+    tax_key = "tax_new" if regime == "new" else "tax_old"
+    regime_label = "New Regime" if regime == "new" else "Old Regime"
+
+    gross_monthly = round(result["gross"] / 12)
+    basic_monthly = round(result["basic"] / 12)
+    allowances_monthly = max(gross_monthly - basic_monthly, 0)
+    employee_pf_monthly = round(result["employee_pf"] / 12)
+    professional_tax_monthly = 200
+    tds_monthly = round(result[tax_key] / 12)
+    deductions_monthly = employee_pf_monthly + professional_tax_monthly + tds_monthly
+    net_pay_monthly = gross_monthly - deductions_monthly
+
+    return {
+        "regime_label": regime_label,
+        "gross_monthly": gross_monthly,
+        "net_pay_monthly": net_pay_monthly,
+        "earnings": [
+            ("Basic Pay", basic_monthly),
+            ("Other Allowances", allowances_monthly),
+        ],
+        "deductions": [
+            ("Employee PF", employee_pf_monthly),
+            ("Professional Tax", professional_tax_monthly),
+            ("TDS", tds_monthly),
+        ],
+        "summary": [
+            ("Gross Earnings", gross_monthly),
+            ("Total Deductions", deductions_monthly),
+            ("Net Pay", net_pay_monthly),
+        ],
+        "annual_ctc": ctc,
+    }
+
+
+def _text_pdf_bytes(title, lines):
+    def _escape_pdf_text(value):
+        return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
+
+    content_lines = [
+        "BT",
+        "/F1 11 Tf",
+        "50 790 Td",
+        f"({_escape_pdf_text(title)}) Tj",
+        "0 -20 Td",
+    ]
+
+    for line in lines:
+        escaped = _escape_pdf_text(line)
+        content_lines.append(f"({escaped}) Tj")
+        content_lines.append("0 -14 Td")
+
+    content_lines.append("ET")
+    content = "\n".join(content_lines).encode("latin-1", "replace")
+
+    objects = []
+    objects.append(b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n")
+    objects.append(b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n")
+    objects.append(
+        b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] "
+        b"/Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj\n"
+    )
+    objects.append(f"4 0 obj << /Length {len(content)} >> stream\n".encode("ascii") + content + b"\nendstream endobj\n")
+    objects.append(b"5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Courier >> endobj\n")
+
+    pdf = bytearray(b"%PDF-1.4\n")
+    offsets = [0]
+    for obj in objects:
+        offsets.append(len(pdf))
+        pdf.extend(obj)
+
+    xref_start = len(pdf)
+    pdf.extend(f"xref\n0 {len(offsets)}\n".encode("ascii"))
+    pdf.extend(b"0000000000 65535 f \n")
+    for off in offsets[1:]:
+        pdf.extend(f"{off:010d} 00000 n \n".encode("ascii"))
+
+    pdf.extend(
+        f"trailer << /Size {len(offsets)} /Root 1 0 R >>\nstartxref\n{xref_start}\n%%EOF".encode("ascii")
+    )
+    return bytes(pdf)
+
+
+def _build_docx_table(rows):
+    table_rows = []
+    for row in rows:
+        row_cells = "".join(
+            f"<w:tc><w:p><w:r><w:t>{escape(str(cell))}</w:t></w:r></w:p></w:tc>"
+            for cell in row
+        )
+        table_rows.append(f"<w:tr>{row_cells}</w:tr>")
+    return (
+        "<w:tbl>"
+        "<w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/></w:tblPr>"
+        "<w:tblGrid><w:gridCol w:w=\"5200\"/><w:gridCol w:w=\"2400\"/></w:tblGrid>"
+        f"{''.join(table_rows)}"
+        "</w:tbl>"
+    )
+
+
+def _docx_bytes(title, payslip):
+    brand_name = "SaveTaxX"
+    earnings_rows = [("Earnings", "Amount (₹)")] + [
+        (name, format_inr(amount)) for name, amount in payslip["earnings"]
+    ]
+    deduction_rows = [("Deductions", "Amount (₹)")] + [
+        (name, format_inr(amount)) for name, amount in payslip["deductions"]
+    ]
+    summary_rows = [("Summary", "Amount (₹)")] + [
+        (name, format_inr(amount)) for name, amount in payslip["summary"]
+    ]
+
+    document_xml = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:wpc="http://schemas.microsoft.com/office/word/2010/wordprocessingCanvas"
+ xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+ xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+ xmlns:v="urn:schemas-microsoft-com:vml"
+ xmlns:wp14="http://schemas.microsoft.com/office/word/2010/wordprocessingDrawing"
+ xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+ xmlns:w10="urn:schemas-microsoft-com:office:word"
+ xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+ xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"
+ xmlns:wpg="http://schemas.microsoft.com/office/word/2010/wordprocessingGroup"
+ xmlns:wpi="http://schemas.microsoft.com/office/word/2010/wordprocessingInk"
+ xmlns:wne="http://schemas.microsoft.com/office/word/2006/wordml"
+ xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"
+ mc:Ignorable="w14 wp14">
+  <w:body>
+    <w:p><w:r><w:rPr><w:b/></w:rPr><w:t>{escape(brand_name)}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>{escape(title)}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Payslip Generated Under: {escape(payslip['regime_label'])}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Annual CTC: {escape(format_inr(payslip['annual_ctc']))}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Monthly Gross Pay: {escape(format_inr(payslip['gross_monthly']))}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Monthly Net Pay: {escape(format_inr(payslip['net_pay_monthly']))}</w:t></w:r></w:p>
+    {_build_docx_table(earnings_rows)}
+    <w:p><w:r><w:t> </w:t></w:r></w:p>
+    {_build_docx_table(deduction_rows)}
+    <w:p><w:r><w:t> </w:t></w:r></w:p>
+    {_build_docx_table(summary_rows)}
+    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr>
+  </w:body>
+</w:document>
+"""
+
+    content_types_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>
+"""
+    rels_xml = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>
+"""
+
+    buffer = BytesIO()
+    with ZipFile(buffer, "w", compression=ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", content_types_xml)
+        archive.writestr("_rels/.rels", rels_xml)
+        archive.writestr("word/document.xml", document_xml)
+
+    return buffer.getvalue()
 
 
 def render():
@@ -85,56 +276,60 @@ def render():
     c3.metric("Eff. Tax Rate (New)", f"{effective_tax_rate(result['tax_new'], result['gross'])}%")
     c4.metric("Eff. Tax Rate (Old)", f"{effective_tax_rate(result['tax_old'], result['gross'])}%")
 
-    # ── BAR CHART ───────────────────────────────────────────────
-    # st.markdown("---")
-    # st.markdown("#### 📊 Salary Breakdown Comparison")
+    breakdown_df = _salary_breakdown_df(ctc, result)
 
-    # chart_data = pd.DataFrame(
-    #     {
-    #         "Regime": ["New Regime", "Old Regime"],
-    #         "In-Hand": [result["new_inhand"], result["old_inhand"]],
-    #         "Income Tax": [result["tax_new"], result["tax_old"]],
-    #         "Employee PF": [result["employee_pf"], result["employee_pf"]],
-    #         "Professional Tax": [2400, 2400],
-    #     }
-    # )
+    st.markdown("#### 📥 Download Salary Breakdown")
+    st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
+    payslip_regime = st.radio(
+        "Payslip Tax Regime",
+        options=["Recommended", "New Regime", "Old Regime"],
+        horizontal=True,
+    )
+    selected_regime = "new" if (payslip_regime == "Recommended" and winner == "new") or payslip_regime == "New Regime" else "old"
+    payslip = _payslip_data(ctc, result, selected_regime)
 
-    # chart_long = chart_data.melt(
-    #     id_vars="Regime",
-    #     var_name="Component",
-    #     value_name="Amount",
-    # )
-    # component_order = ["In-Hand", "Income Tax", "Employee PF", "Professional Tax"]
-    # chart_long["Component"] = pd.Categorical(
-    #     chart_long["Component"],
-    #     categories=component_order,
-    #     ordered=True,
-    # )
+    document_title = f"Salary Payslip - CTC {format_inr(ctc)}"
+    doc_filename = f"salary_breakdown_{int(ctc)}.docx"
+    pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
 
-    # chart = (
-    #     alt.Chart(chart_long)
-    #     .mark_bar()
-    #     .encode(
-    #         x=alt.X("Amount:Q", title="Amount (₹)", stack="zero"),
-    #         y=alt.Y("Regime:N", title=""),
-    #         color=alt.Color(
-    #             "Component:N",
-    #             sort=component_order,
-    #             scale=alt.Scale(
-    #                 domain=component_order,
-    #                 range=["#22c55e", "#ef4444", "#f59e0b", "#6b7280"],
-    #             ),
-    #         ),
-    #         tooltip=[
-    #             alt.Tooltip("Regime:N"),
-    #             alt.Tooltip("Component:N"),
-    #             alt.Tooltip("Amount:Q", format=","),
-    #         ],
-    #     )
-    #     .properties(height=180)
-    # )
+    row_template = "{:<26} {:>18}"
+    text_lines = [
+        "SaveTaxX",
+        f"Regime: {payslip['regime_label']}",
+        f"Annual CTC: {format_inr(payslip['annual_ctc'])}",
+        f"Monthly Gross Pay: {format_inr(payslip['gross_monthly'])}",
+        f"Monthly Net Pay: {format_inr(payslip['net_pay_monthly'])}",
+        "",
+        "EARNINGS",
+        row_template.format("Component", "Amount"),
+        "-" * 46,
+    ]
+    for name, amount in payslip["earnings"]:
+        text_lines.append(row_template.format(name[:26], format_inr(amount)))
+    text_lines.extend(["", "DEDUCTIONS", row_template.format("Component", "Amount"), "-" * 46])
+    for name, amount in payslip["deductions"]:
+        text_lines.append(row_template.format(name[:26], format_inr(amount)))
+    text_lines.extend(["", "SUMMARY", row_template.format("Component", "Amount"), "-" * 46])
+    for name, amount in payslip["summary"]:
+        text_lines.append(row_template.format(name[:26], format_inr(amount)))
 
-    # st.altair_chart(chart, use_container_width=True)
+    dl1, dl2 = st.columns(2)
+    with dl1:
+        st.download_button(
+            "📄 Download Payslip DOCX",
+            data=_docx_bytes(document_title, payslip),
+            file_name=doc_filename,
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            use_container_width=True,
+        )
+    with dl2:
+        st.download_button(
+            "🧾 Download Payslip PDF",
+            data=_text_pdf_bytes(document_title, text_lines),
+            file_name=pdf_filename,
+            mime="application/pdf",
+            use_container_width=True,
+        )
 
     # ── DETAILED BREAKDOWN ──────────────────────────────────────
     with st.expander("🔍 Full Breakdown"):
