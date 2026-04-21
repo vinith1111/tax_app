@@ -11,10 +11,10 @@ from validators.input_validator import validate_ctc
 def _salary_breakdown_df(ctc, result):
     return pd.DataFrame(
         [
-            ["CTC", format_inr(ctc), "-"],
-            ["Basic (50%)", format_inr(result["basic"]), "-"],
-            ["Employer PF", format_inr(result["employer_pf"]), "-"],
-            ["Gross Salary", format_inr(result["gross"]), "-"],
+            ["CTC", format_inr(ctc), format_inr(ctc)],
+            ["Basic (50%)", format_inr(result["basic"]), format_inr(result["basic"])],
+            ["Employer PF", format_inr(result["employer_pf"]), format_inr(result["employer_pf"])],
+            ["Gross Salary", format_inr(result["gross"]), format_inr(result["gross"])],
             ["Employee PF", format_inr(result["employee_pf"]), format_inr(result["employee_pf"])],
             ["Professional Tax", "₹2,400", "₹2,400"],
             ["Taxable Income", format_inr(result["taxable_new"]), format_inr(result["taxable_old"])],
@@ -115,6 +115,25 @@ def _text_pdf_bytes(title, lines):
     return bytes(pdf)
 
 
+def _render_text_table(headers, rows):
+    normalized_rows = [[str(cell) for cell in row] for row in rows]
+    widths = [len(str(header)) for header in headers]
+    for row in normalized_rows:
+        for idx, cell in enumerate(row):
+            widths[idx] = max(widths[idx], len(cell))
+
+    def _line(char="-"):
+        return "+" + "+".join(char * (width + 2) for width in widths) + "+"
+
+    def _row(values):
+        return "| " + " | ".join(str(value).ljust(widths[idx]) for idx, value in enumerate(values)) + " |"
+
+    output = [_line("="), _row(headers), _line("=")]
+    output.extend(_row(row) for row in normalized_rows)
+    output.append(_line("-"))
+    return output
+
+
 def _build_docx_table(rows):
     table_rows = []
     for row in rows:
@@ -132,8 +151,9 @@ def _build_docx_table(rows):
     )
 
 
-def _docx_bytes(title, payslip):
+def _docx_bytes(title, payslip, comparison_rows):
     brand_name = "SaveTaxX"
+    comparison_table_rows = [("Component", "New Regime", "Old Regime")] + comparison_rows
     earnings_rows = [("Earnings", "New Regime", "Old Regime")] + [
         (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]
     ]
@@ -168,6 +188,9 @@ def _docx_bytes(title, payslip):
     <w:p><w:r><w:t>Monthly Gross Pay: {escape(format_inr(payslip['gross_monthly']))}</w:t></w:r></w:p>
     <w:p><w:r><w:t>Monthly Net Pay (New): {escape(format_inr(payslip['net_pay_new']))}</w:t></w:r></w:p>
     <w:p><w:r><w:t>Monthly Net Pay (Old): {escape(format_inr(payslip['net_pay_old']))}</w:t></w:r></w:p>
+    <w:p><w:r><w:t>Tax Comparison (New vs Old)</w:t></w:r></w:p>
+    {_build_docx_table(comparison_table_rows)}
+    <w:p><w:r><w:t> </w:t></w:r></w:p>
     {_build_docx_table(earnings_rows)}
     <w:p><w:r><w:t> </w:t></w:r></w:p>
     {_build_docx_table(deduction_rows)}
@@ -201,7 +224,7 @@ def _docx_bytes(title, payslip):
 
 
 def render():
-    st.markdown("### 💼 Salary Calculator")
+    st.markdown("### Salary Calculator")
     st.caption("Enter your CTC to see exact in-hand salary under both tax regimes.")
 
     ctc = st.number_input(
@@ -215,7 +238,7 @@ def render():
     valid, msg = validate_ctc(ctc)
 
     if ctc > 0 and not valid:
-        st.error(f"⚠️ {msg}")
+        st.error(f"{msg}")
         return
 
     if not valid:
@@ -240,7 +263,7 @@ def render():
                 <p style='color:#9ca3af; font-size:13px; margin:0 0 6px;'>Monthly In-Hand · New Regime</p>
                 <p style='color:{"#4ade80" if winner == "new" else "#e5e7eb"}; font-size:28px; font-weight:700; margin:0;'>{format_inr(round(new / 12))}</p>
                 <p style='color:#6b7280; font-size:12px; margin:6px 0 0;'>{format_inr(new)} / year</p>
-                {"<span style='background:#166534;color:#4ade80;font-size:11px;padding:3px 10px;border-radius:20px;'>✓ Recommended</span>" if winner == "new" else ""}
+                {"<span style='background:#166534;color:#4ade80;font-size:11px;padding:3px 10px;border-radius:20px;'>Recommended</span>" if winner == "new" else ""}
             </div>
             """,
             unsafe_allow_html=True,
@@ -255,7 +278,7 @@ def render():
                 <p style='color:#9ca3af; font-size:13px; margin:0 0 6px;'>Monthly In-Hand · Old Regime</p>
                 <p style='color:{"#4ade80" if winner == "old" else "#e5e7eb"}; font-size:28px; font-weight:700; margin:0;'>{format_inr(round(old / 12))}</p>
                 <p style='color:#6b7280; font-size:12px; margin:6px 0 0;'>{format_inr(old)} / year</p>
-                {"<span style='background:#166534;color:#4ade80;font-size:11px;padding:3px 10px;border-radius:20px;'>✓ Recommended</span>" if winner == "old" else ""}
+                {"<span style='background:#166534;color:#4ade80;font-size:11px;padding:3px 10px;border-radius:20px;'>Recommended</span>" if winner == "old" else ""}
             </div>
             """,
             unsafe_allow_html=True,
@@ -265,11 +288,34 @@ def render():
 
     # ── VERDICT BANNER ──────────────────────────────────────────
     if new == old:
-        st.info("⚖️ Both regimes give the same in-hand salary for your CTC.")
+        st.info("Both regimes give the same in-hand salary for your CTC.")
     elif winner == "new":
-        st.success(f"🏆 New Regime saves you **{format_inr(diff)}** per year ({format_inr(round(diff/12))}/month)")
+        st.success(f"New Regime saves you **{format_inr(diff)}** per year ({format_inr(round(diff/12))}/month)")
     else:
-        st.success(f"🏆 Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
+        st.success(f"Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
+
+    # ── TAX INSIGHTS ───────────────────────────────────────────
+    if result["marginal_relief_savings"] > 0:
+        st.markdown(f"""
+        <div style="
+            background:#1a1f2e;
+            border:1px solid #1f2937;
+            border-radius:12px;
+            padding:14px 16px;
+            margin-top:12px;
+            margin-bottom:4px;
+        ">
+            <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
+                Marginal Relief Tax Insight
+            </div>
+            <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
+                You crossed <b>₹12L</b> by
+                <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
+                Tax reduced by
+                <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # ── QUICK STATS ─────────────────────────────────────────────
     st.markdown("---")
@@ -281,15 +327,24 @@ def render():
 
     breakdown_df = _salary_breakdown_df(ctc, result)
 
-    st.markdown("#### 📥 Download Salary Breakdown")
-    st.dataframe(breakdown_df, hide_index=True, use_container_width=True)
+    st.markdown("#### Salary Breakdown (Compact)")
+    compact_rows = [
+        "CTC",
+        "Gross Salary",
+        "Taxable Income",
+        "Total Tax",
+        "Annual In-Hand",
+        "Monthly In-Hand",
+    ]
+    compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True)
+    st.table(compact_df)
     payslip = _payslip_data(ctc, result)
+    comparison_rows = [tuple(row) for row in breakdown_df[["Component", "New Regime", "Old Regime"]].values.tolist()]
 
     document_title = f"Salary Payslip (New vs Old) - CTC {format_inr(ctc)}"
     doc_filename = f"salary_breakdown_{int(ctc)}.docx"
     pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
 
-    row_template = "{} | {} | {}"
     text_lines = [
         "SaveTaxX",
         f"Annual CTC: {format_inr(payslip['annual_ctc'])}",
@@ -297,18 +352,22 @@ def render():
         f"Monthly Net Pay (New): {format_inr(payslip['net_pay_new'])}",
         f"Monthly Net Pay (Old): {format_inr(payslip['net_pay_old'])}",
         "",
-        "EARNINGS",
-        row_template.format("Component", "New", "Old"),
-        "-" * 54,
+        "TAX COMPARISON (NEW VS OLD)",
     ]
-    for name, new_amount, old_amount in payslip["earnings"]:
-        text_lines.append(row_template.format(name, format_inr(new_amount), format_inr(old_amount)))
-    text_lines.extend(["", "DEDUCTIONS", row_template.format("Component", "New", "Old"), "-" * 54])
-    for name, new_amount, old_amount in payslip["deductions"]:
-        text_lines.append(row_template.format(name, format_inr(new_amount), format_inr(old_amount)))
-    text_lines.extend(["", "SUMMARY", row_template.format("Component", "New", "Old"), "-" * 54])
-    for name, new_amount, old_amount in payslip["summary"]:
-        text_lines.append(row_template.format(name, format_inr(new_amount), format_inr(old_amount)))
+    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), comparison_rows))
+
+    earnings_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]]
+    deduction_rows = [
+        (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["deductions"]
+    ]
+    summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
+
+    text_lines.extend(["", "EARNINGS"])
+    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), earnings_rows))
+    text_lines.extend(["", "DEDUCTIONS"])
+    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), deduction_rows))
+    text_lines.extend(["", "SUMMARY"])
+    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), summary_rows))
 
     file_type = st.selectbox("Download Format", options=["PDF", "DOCX"])
     if file_type == "PDF":
@@ -318,74 +377,22 @@ def render():
     else:
         file_name = doc_filename
         mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        payload = _docx_bytes(document_title, payslip)
+        payload = _docx_bytes(document_title, payslip, comparison_rows)
 
     st.download_button(
-        f"⬇️ Download Payslip ({file_type})",
+        f"Download Payslip ({file_type})",
         data=payload,
         file_name=file_name,
         mime=mime,
         use_container_width=True,
     )
 
-    # ── DETAILED BREAKDOWN ──────────────────────────────────────
-    with st.expander("🔍 Full Breakdown"):
-
-        col1, col2 = st.columns(2)
-
-        with col1:
-            st.markdown("**💼 Salary Structure**")
-            st.markdown(f"- CTC: `{format_inr(ctc)}`")
-            st.markdown(f"- Basic (50%): `{format_inr(result['basic'])}`")
-            st.markdown(f"- Employer PF: `{format_inr(result['employer_pf'])}`")
-            st.markdown(f"- Gross: `{format_inr(result['gross'])}`")
-            st.markdown(f"- Employee PF: `{format_inr(result['employee_pf'])}`")
-            st.markdown(f"- Professional Tax: `₹2,400`")
-
-        with col2:
-            st.markdown("**🏛 New Regime Tax**")
-            st.markdown(f"- Taxable Income: `{format_inr(result['taxable_new'])}`")
-            # st.markdown(f"- Status: `{result['threshold_message']}`")
-            st.markdown(f"- Base Tax: `{format_inr(result['base_tax_new'])}`")
-            st.markdown(f"- Surcharge: `{format_inr(result['surcharge_new'])}`")
-            st.markdown(f"- Cess (4%): `{format_inr(result['cess_new'])}`")
-            st.markdown(f"- **Total Tax: `{format_inr(result['tax_new'])}`**")
-
-            if result["marginal_relief_savings"] > 0:
-                st.markdown(f"""
-                <div style="
-                    background:#1a1f2e;
-                    border:1px solid #1f2937;
-                    border-radius:12px;
-                    padding:14px 16px;
-                    margin-top:12px;
-                ">
-                    <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
-                        🧠 Marginal Relief Insight
-                    </div>
-                    <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
-                        You crossed <b>₹12L</b> by 
-                        <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
-                        Tax reduced by 
-                        <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-            st.markdown("**🏛 Old Regime Tax**")
-            st.markdown(f"- Taxable Income: `{format_inr(result['taxable_old'])}`")
-            st.markdown(f"- Base Tax: `{format_inr(result['base_tax_old'])}`")
-            st.markdown(f"- Surcharge: `{format_inr(result['surcharge_old'])}`")
-            st.markdown(f"- Cess (4%): `{format_inr(result['cess_old'])}`")
-            st.markdown(f"- **Total Tax: `{format_inr(result['tax_old'])}`**")
-
-    # Outside expander
     if result["surcharge_new"] > 0:
-        st.warning("⚠️ Surcharge applied — income exceeds ₹50L")
+        st.warning("Surcharge applied — income exceeds ₹50L")
 
     if result["pf_taxable_contribution_excess"] > 0:
         st.info(
-            f"🧾 Employee PF contribution above ₹2.5L can create taxable interest. "
+            f"Employee PF contribution above ₹2.5L can create taxable interest. "
             f"Excess contribution: `{format_inr(result['pf_taxable_contribution_excess'])}` · "
             f"Estimated taxable interest (@8.25%): `{format_inr(result['taxable_pf_interest'])}` per year."
         )
