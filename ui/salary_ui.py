@@ -505,7 +505,7 @@ def render():
     #         }
     #     ]
     # )
-    compact_df = pd.concat([compact_df, delta_row], ignore_index=True)
+    compact_df = pd.concat([compact_df], ignore_index=True)
     highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand"}
 
     def _highlight_row(row):
