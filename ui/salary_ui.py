@@ -471,6 +471,7 @@ def render():
         "Monthly In-Hand",
     ]
     compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True)
+    st.markdown("---")
     st.table(compact_df)
 
     if result["surcharge_new"] > 0:
