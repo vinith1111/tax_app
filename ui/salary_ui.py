@@ -373,7 +373,7 @@ def render():
     near_neutral = diff_abs < 12_000
 
     # ── MONTHLY IN-HAND HERO ────────────────────────────────────
-    st.markdown("---")
+    # st.markdown("---")
     st.markdown(
         f"""
         <div style="
@@ -486,7 +486,7 @@ def render():
 
     breakdown_df = _salary_breakdown_df(ctc, result)
 
-    st.markdown("#### Salary Breakdown (Compact and Decision-focused)")
+    st.markdown("#### Salary Breakdown")
     compact_rows = [
         "CTC",
         "Gross Salary",
@@ -538,7 +538,7 @@ def render():
     ]
     summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
 
-    st.markdown("#### Download detailed payslip")
+    st.markdown("#### Download")
     st.caption("PDF is best for sharing. DOCX is best for edits and annotation.")
     file_type = st.selectbox("Download Format", options=["PDF", "DOCX"])
     if file_type == "PDF":
