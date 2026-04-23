@@ -8,6 +8,14 @@ from utils.formatter import format_inr, format_lpa, effective_tax_rate
 from validators.input_validator import validate_ctc
 
 
+def _parse_inr_amount(value):
+    clean = str(value).replace("₹", "").replace(",", "").strip()
+    try:
+        return int(float(clean))
+    except ValueError:
+        return 0
+
+
 def _salary_breakdown_df(ctc, result):
     return pd.DataFrame(
         [
@@ -64,27 +72,120 @@ def _payslip_data(ctc, result):
     }
 
 
-def _text_pdf_bytes(title, lines):
+def _text_pdf_bytes(title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows):
     def _escape_pdf_text(value):
         return value.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
     def _pdf_safe(value):
         return value.replace("₹", "Rs. ")
 
-    content_lines = [
-        "BT",
-        "/F1 11 Tf",
-        "50 790 Td",
-        f"({_escape_pdf_text(_pdf_safe(title))}) Tj",
-        "0 -20 Td",
-    ]
+    def _draw_text(commands, text, x, y, size=10):
+        safe_text = _escape_pdf_text(_pdf_safe(str(text)))
+        commands.extend(
+            [
+                "BT",
+                f"/F1 {size} Tf",
+                f"{x} {y} Td",
+                f"({safe_text}) Tj",
+                "ET",
+            ]
+        )
 
-    for line in lines:
-        escaped = _escape_pdf_text(_pdf_safe(line))
-        content_lines.append(f"({escaped}) Tj")
-        content_lines.append("0 -14 Td")
+    def _draw_table(commands, headers, rows, x, y_top, col_widths, row_height=16):
+        total_width = sum(col_widths)
+        table_rows = [headers] + rows
+        total_height = row_height * len(table_rows)
+        y_bottom = y_top - total_height
 
-    content_lines.append("ET")
+        commands.extend(["0.6 w", f"{x} {y_bottom} {total_width} {total_height} re S"])
+
+        x_cursor = x
+        for width in col_widths[:-1]:
+            x_cursor += width
+            commands.extend([f"{x_cursor} {y_bottom} m", f"{x_cursor} {y_top} l", "S"])
+
+        for i in range(1, len(table_rows)):
+            y_line = y_top - i * row_height
+            commands.extend([f"{x} {y_line} m", f"{x + total_width} {y_line} l", "S"])
+
+        for row_index, row in enumerate(table_rows):
+            y_text = y_top - (row_index + 1) * row_height + 5
+            for col_index, cell in enumerate(row):
+                left = x + sum(col_widths[:col_index])
+                right = left + col_widths[col_index]
+                cell_text = _pdf_safe(str(cell))
+                if row_index == 0:
+                    text_x = left + 6
+                elif col_index == 0:
+                    text_x = left + 6
+                else:
+                    approx_text_width = len(cell_text) * 5.2
+                    text_x = max(left + 6, right - approx_text_width - 6)
+                _draw_text(commands, cell_text, text_x, y_text, size=9)
+
+        return y_bottom
+
+    content_lines = []
+    y_cursor = 768
+    left_margin = 40
+
+    _draw_text(content_lines, title, left_margin, y_cursor, size=12)
+    y_cursor -= 20
+    _draw_text(content_lines, "SaveTaxX", left_margin, y_cursor)
+    y_cursor -= 16
+    _draw_text(content_lines, f"Annual CTC: {format_inr(payslip['annual_ctc'])}", left_margin, y_cursor)
+    y_cursor -= 14
+    _draw_text(content_lines, f"Monthly Gross Pay: {format_inr(payslip['gross_monthly'])}", left_margin, y_cursor)
+    y_cursor -= 14
+    _draw_text(content_lines, f"Monthly Net Pay (New): {format_inr(payslip['net_pay_new'])}", left_margin, y_cursor)
+    y_cursor -= 14
+    _draw_text(content_lines, f"Monthly Net Pay (Old): {format_inr(payslip['net_pay_old'])}", left_margin, y_cursor)
+    y_cursor -= 22
+
+    _draw_text(content_lines, "TAX COMPARISON (NEW VS OLD)", left_margin, y_cursor, size=10)
+    y_cursor -= 10
+    y_cursor = _draw_table(
+        content_lines,
+        ("Component", "New Regime", "Old Regime"),
+        comparison_rows,
+        left_margin,
+        y_cursor,
+        col_widths=(230, 150, 150),
+    ) - 18
+
+    _draw_text(content_lines, "EARNINGS", left_margin, y_cursor, size=10)
+    y_cursor -= 10
+    y_cursor = _draw_table(
+        content_lines,
+        ("Component", "New Regime", "Old Regime"),
+        earnings_rows,
+        left_margin,
+        y_cursor,
+        col_widths=(230, 150, 150),
+    ) - 16
+
+    _draw_text(content_lines, "DEDUCTIONS", left_margin, y_cursor, size=10)
+    y_cursor -= 10
+    y_cursor = _draw_table(
+        content_lines,
+        ("Component", "New Regime", "Old Regime"),
+        deduction_rows,
+        left_margin,
+        y_cursor,
+        col_widths=(230, 150, 150),
+    ) - 16
+
+    _draw_text(content_lines, "SUMMARY", left_margin, y_cursor, size=10)
+    y_cursor -= 10
+    _draw_table(
+        content_lines,
+        ("Component", "New Regime", "Old Regime"),
+        summary_rows,
+        left_margin,
+        y_cursor,
+        col_widths=(230, 150, 150),
+    )
+
     content = "\n".join(content_lines).encode("latin-1", "replace")
 
     objects = []
@@ -115,36 +216,43 @@ def _text_pdf_bytes(title, lines):
     return bytes(pdf)
 
 
-def _render_text_table(headers, rows):
-    normalized_rows = [[str(cell) for cell in row] for row in rows]
-    widths = [len(str(header)) for header in headers]
-    for row in normalized_rows:
-        for idx, cell in enumerate(row):
-            widths[idx] = max(widths[idx], len(cell))
-
-    def _line(char="-"):
-        return "+" + "+".join(char * (width + 2) for width in widths) + "+"
-
-    def _row(values):
-        return "| " + " | ".join(str(value).ljust(widths[idx]) for idx, value in enumerate(values)) + " |"
-
-    output = [_line("="), _row(headers), _line("=")]
-    output.extend(_row(row) for row in normalized_rows)
-    output.append(_line("-"))
-    return output
-
-
 def _build_docx_table(rows):
     table_rows = []
-    for row in rows:
+    for row_index, row in enumerate(rows):
         row_cells = "".join(
-            f"<w:tc><w:p><w:r><w:t>{escape(str(cell))}</w:t></w:r></w:p></w:tc>"
+            (
+                "<w:tc>"
+                "<w:tcPr>"
+                "<w:tcW w:w=\"0\" w:type=\"auto\"/>"
+                "</w:tcPr>"
+                "<w:p><w:r>"
+                f"{'<w:rPr><w:b/></w:rPr>' if row_index == 0 else ''}"
+                f"<w:t>{escape(str(cell))}</w:t>"
+                "</w:r></w:p>"
+                "</w:tc>"
+            )
             for cell in row
         )
         table_rows.append(f"<w:tr>{row_cells}</w:tr>")
     return (
         "<w:tbl>"
-        "<w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/></w:tblPr>"
+        "<w:tblPr>"
+        "<w:tblW w:w=\"0\" w:type=\"auto\"/>"
+        "<w:tblBorders>"
+        "<w:top w:val=\"single\" w:sz=\"8\" w:space=\"0\" w:color=\"000000\"/>"
+        "<w:left w:val=\"single\" w:sz=\"8\" w:space=\"0\" w:color=\"000000\"/>"
+        "<w:bottom w:val=\"single\" w:sz=\"8\" w:space=\"0\" w:color=\"000000\"/>"
+        "<w:right w:val=\"single\" w:sz=\"8\" w:space=\"0\" w:color=\"000000\"/>"
+        "<w:insideH w:val=\"single\" w:sz=\"8\" w:space=\"0\" w:color=\"000000\"/>"
+        "<w:insideV w:val=\"single\" w:sz=\"8\" w:space=\"0\" w:color=\"000000\"/>"
+        "</w:tblBorders>"
+        "<w:tblCellMar>"
+        "<w:top w:w=\"80\" w:type=\"dxa\"/>"
+        "<w:left w:w=\"80\" w:type=\"dxa\"/>"
+        "<w:bottom w:w=\"80\" w:type=\"dxa\"/>"
+        "<w:right w:w=\"80\" w:type=\"dxa\"/>"
+        "</w:tblCellMar>"
+        "</w:tblPr>"
         "<w:tblGrid><w:gridCol w:w=\"4200\"/><w:gridCol w:w=\"2100\"/><w:gridCol w:w=\"2100\"/></w:tblGrid>"
         f"{''.join(table_rows)}"
         "</w:tbl>"
@@ -226,6 +334,17 @@ def _docx_bytes(title, payslip, comparison_rows):
 def render():
     st.markdown("### Salary Calculator")
     st.caption("Enter your CTC to see exact in-hand salary under both tax regimes.")
+    st.markdown("#### UX Modernization Roadmap (All 4 Phases Applied)")
+    phases_df = pd.DataFrame(
+        [
+            ("Phase 1", "Decision-first layout", "Completed"),
+            ("Phase 2", "Comparison readability", "Completed"),
+            ("Phase 3", "Export document polish", "Completed"),
+            ("Phase 4", "Trust and insights layer", "Completed"),
+        ],
+        columns=["Phase", "Outcome", "Status"],
+    )
+    st.table(phases_df)
 
     ctc = st.number_input(
         "Annual CTC (₹)",
@@ -248,10 +367,36 @@ def render():
     new = result["new_inhand"]
     old = result["old_inhand"]
     diff = new - old
+    diff_abs = abs(diff)
     winner = "new" if new >= old else "old"
+    winner_label = "New Regime" if winner == "new" else "Old Regime"
+    near_neutral = diff_abs < 12_000
 
     # ── MONTHLY IN-HAND HERO ────────────────────────────────────
     st.markdown("---")
+    st.markdown(
+        f"""
+        <div style="
+            background:#111827;
+            border:1px solid #1f2937;
+            border-radius:12px;
+            padding:12px 14px;
+            margin-bottom:12px;
+        ">
+            <div style="font-size:13px; color:#9ca3af;">Recommendation Summary</div>
+            <div style="font-size:16px; color:#e5e7eb; margin-top:4px;">
+                <b>{winner_label}</b> is better by
+                <span style="color:#22c55e;">{format_inr(diff_abs)}/year</span>
+                (<span style="color:#22c55e;">{format_inr(round(diff_abs / 12))}/month</span>).
+            </div>
+            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">
+                {"Outcome is near-neutral. Choose based on deduction flexibility and filing preference." if near_neutral else "Recommendation based on maximum annual and monthly in-hand value."}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
     hero_col1, hero_col2 = st.columns(2)
 
     with hero_col1:
@@ -294,28 +439,42 @@ def render():
     else:
         st.success(f"Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
 
+    st.markdown(
+        """
+        #### Final Output Preview
+        1. Decision-first summary with recommended regime and yearly/monthly savings.
+        2. Side-by-side New vs Old hero cards for instant comparison.
+        3. Compact breakdown table with highlighted decision rows and delta row.
+        4. Structured exports (PDF and DOCX) with proper bordered tables for review/share.
+        """
+    )
+
     # ── TAX INSIGHTS ───────────────────────────────────────────
-    if result["marginal_relief_savings"] > 0:
-        st.markdown(f"""
-        <div style="
-            background:#1a1f2e;
-            border:1px solid #1f2937;
-            border-radius:12px;
-            padding:14px 16px;
-            margin-top:12px;
-            margin-bottom:4px;
-        ">
-            <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
-                Marginal Relief Tax Insight
-            </div>
-            <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
-                You crossed <b>₹12L</b> by
-                <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
-                Tax reduced by
-                <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>
-            </div>
+    marginal_relief_message = (
+        f"""You crossed <b>₹12L</b> by
+        <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
+        Tax reduced by
+        <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>"""
+        if result["marginal_relief_savings"] > 0
+        else "No marginal relief applicable at this CTC."
+    )
+    st.markdown(f"""
+    <div style="
+        background:#1a1f2e;
+        border:1px solid #1f2937;
+        border-radius:12px;
+        padding:14px 16px;
+        margin-top:12px;
+        margin-bottom:4px;
+    ">
+        <div style="font-size:14px; color:#9ca3af; margin-bottom:6px;">
+            Marginal Relief Tax Insight
         </div>
-        """, unsafe_allow_html=True)
+        <div style="font-size:16px; color:#e5e7eb; line-height:1.6;">
+            {marginal_relief_message}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
     # ── QUICK STATS ─────────────────────────────────────────────
     st.markdown("---")
@@ -327,7 +486,7 @@ def render():
 
     breakdown_df = _salary_breakdown_df(ctc, result)
 
-    st.markdown("#### Salary Breakdown (Compact)")
+    st.markdown("#### Salary Breakdown (Compact and Decision-focused)")
     compact_rows = [
         "CTC",
         "Gross Salary",
@@ -336,8 +495,36 @@ def render():
         "Annual In-Hand",
         "Monthly In-Hand",
     ]
-    compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True)
-    st.table(compact_df)
+    compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True).copy()
+    delta_row = pd.DataFrame(
+        [
+            {
+                "Component": "Difference (New - Old)",
+                "New Regime": format_inr(_parse_inr_amount(compact_df.iloc[-1]["New Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["Old Regime"])),
+                "Old Regime": "Reference",
+            }
+        ]
+    )
+    compact_df = pd.concat([compact_df, delta_row], ignore_index=True)
+    highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand", "Difference (New - Old)"}
+
+    def _highlight_row(row):
+        if row["Component"] in highlight_rows:
+            return ["background-color: #172554; color: #e5e7eb; font-weight: 600"] * len(row)
+        return [""] * len(row)
+
+    st.table(compact_df.style.apply(_highlight_row, axis=1))
+
+    with st.expander("Assumptions used for this estimate"):
+        st.markdown(
+            """
+            - Basic salary assumed at 50% of CTC.
+            - Employer and employee PF derived from annual basic.
+            - Professional tax is fixed at ₹2,400 annually.
+            - New vs old regime taxable income and tax slabs are computed by service logic.
+            - Marginal relief is shown when eligible.
+            """
+        )
     payslip = _payslip_data(ctc, result)
     comparison_rows = [tuple(row) for row in breakdown_df[["Component", "New Regime", "Old Regime"]].values.tolist()]
 
@@ -345,35 +532,19 @@ def render():
     doc_filename = f"salary_breakdown_{int(ctc)}.docx"
     pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
 
-    text_lines = [
-        "SaveTaxX",
-        f"Annual CTC: {format_inr(payslip['annual_ctc'])}",
-        f"Monthly Gross Pay: {format_inr(payslip['gross_monthly'])}",
-        f"Monthly Net Pay (New): {format_inr(payslip['net_pay_new'])}",
-        f"Monthly Net Pay (Old): {format_inr(payslip['net_pay_old'])}",
-        "",
-        "TAX COMPARISON (NEW VS OLD)",
-    ]
-    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), comparison_rows))
-
     earnings_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]]
     deduction_rows = [
         (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["deductions"]
     ]
     summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
 
-    text_lines.extend(["", "EARNINGS"])
-    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), earnings_rows))
-    text_lines.extend(["", "DEDUCTIONS"])
-    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), deduction_rows))
-    text_lines.extend(["", "SUMMARY"])
-    text_lines.extend(_render_text_table(("Component", "New Regime", "Old Regime"), summary_rows))
-
+    st.markdown("#### Download detailed payslip")
+    st.caption("PDF is best for sharing. DOCX is best for edits and annotation.")
     file_type = st.selectbox("Download Format", options=["PDF", "DOCX"])
     if file_type == "PDF":
         file_name = pdf_filename
         mime = "application/pdf"
-        payload = _text_pdf_bytes(document_title, text_lines)
+        payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
     else:
         file_name = doc_filename
         mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
