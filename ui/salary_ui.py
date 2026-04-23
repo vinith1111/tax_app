@@ -443,28 +443,24 @@ def render():
     summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
     pdf_payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
 
-    heading_col, download_col = st.columns([10, 1])
-    with heading_col:
-        st.markdown("#### Salary Breakdown")
-    with download_col:
-        pdf_b64 = base64.b64encode(pdf_payload).decode("ascii")
-        st.markdown(
-            f"""
-            <div style="display:flex;align-items:center;gap:0;margin:0;padding:0;">
+    pdf_b64 = base64.b64encode(pdf_payload).decode("ascii")
+    st.markdown(
+        f"""
+        <div style="display:flex;align-items:center;gap:0;margin:0;padding:0;">
             <h4 style="margin:0;padding:0;">Salary Breakdown</h4>
             <a href="data:application/pdf;base64,{pdf_b64}" download="{pdf_filename}" title="Download payslip PDF"
-            style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin:0;padding:0;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
-            stroke="#E5E7EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="7 10 12 15 17 10"/>
-            <line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
+               style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin:0;padding:0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+                     stroke="#E5E7EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
             </a>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
 
     compact_rows = [
