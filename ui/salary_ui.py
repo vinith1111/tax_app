@@ -391,9 +391,9 @@ def render():
     if new == old:
         st.info("Both regimes give the same in-hand salary for your CTC.")
     elif winner == "new":
-        st.success(f"New Regime saves you **{format_inr(diff)}** per year ({format_inr(round(diff/12))}/month)")
+        st.success(f"🏆 New Regime saves you **{format_inr(diff)}** per year ({format_inr(round(diff/12))}/month)")
     else:
-        st.success(f"Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
+        st.success(f"🏆 Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
 
     # ── TAX INSIGHTS ───────────────────────────────────────────
     marginal_relief_message = (
