@@ -442,7 +442,8 @@ def render():
     summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
     pdf_payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
 
-    heading_col, action_col = st.columns([5, 1])
+    #heading_col, action_col = st.columns([5, 1])
+    heading_col, action_col, _spacer_col = st.columns([2.4, 0.45, 7.15], gap="small")
     with heading_col:
         st.markdown("#### Salary Breakdown")
     with action_col:
