@@ -448,6 +448,7 @@ def render():
         f"""
         <div style="display:flex;align-items:center;gap:0;margin:0;padding:0;">
             <h4 style="margin:0;padding:0;">Salary Breakdown</h4>
+            <br>
             <a href="data:application/pdf;base64,{pdf_b64}" download="{pdf_filename}" title="Download payslip PDF"
                style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin:0;padding:0;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
