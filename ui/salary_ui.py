@@ -334,17 +334,6 @@ def _docx_bytes(title, payslip, comparison_rows):
 def render():
     st.markdown("### Salary Calculator")
     st.caption("Enter your CTC to see exact in-hand salary under both tax regimes.")
-    # st.markdown("#### UX Modernization Roadmap (All 4 Phases Applied)")
-    # phases_df = pd.DataFrame(
-    #     [
-    #         ("Phase 1", "Decision-first layout", "Completed"),
-    #         ("Phase 2", "Comparison readability", "Completed"),
-    #         ("Phase 3", "Export document polish", "Completed"),
-    #         ("Phase 4", "Trust and insights layer", "Completed"),
-    #     ],
-    #     columns=["Phase", "Outcome", "Status"],
-    # )
-    # st.table(phases_df)
 
     ctc = st.number_input(
         "Annual CTC (₹)",
@@ -367,36 +356,10 @@ def render():
     new = result["new_inhand"]
     old = result["old_inhand"]
     diff = new - old
-    diff_abs = abs(diff)
     winner = "new" if new >= old else "old"
-    winner_label = "New Regime" if winner == "new" else "Old Regime"
-    near_neutral = diff_abs < 12_000
 
     # ── MONTHLY IN-HAND HERO ────────────────────────────────────
-    # st.markdown("---")
-    # st.markdown(
-    #     f"""
-    #     <div style="
-    #         background:#111827;
-    #         border:1px solid #1f2937;
-    #         border-radius:12px;
-    #         padding:12px 14px;
-    #         margin-bottom:12px;
-    #     ">
-    #         <div style="font-size:13px; color:#9ca3af;">Recommendation Summary</div>
-    #         <div style="font-size:16px; color:#e5e7eb; margin-top:4px;">
-    #             <b>{winner_label}</b> is better by
-    #             <span style="color:#22c55e;">{format_inr(diff_abs)}/year</span>
-    #             (<span style="color:#22c55e;">{format_inr(round(diff_abs / 12))}/month</span>).
-    #         </div>
-    #         <div style="font-size:12px; color:#9ca3af; margin-top:6px;">
-    #             {"Outcome is near-neutral. Choose based on deduction flexibility and filing preference." if near_neutral else "Recommendation based on maximum annual and monthly in-hand value."}
-    #         </div>
-    #     </div>
-    #     """,
-    #     unsafe_allow_html=True,
-    # )
-
+    st.markdown("---")
     hero_col1, hero_col2 = st.columns(2)
 
     with hero_col1:
@@ -439,16 +402,6 @@ def render():
     else:
         st.success(f"Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
 
-    # st.markdown(
-    #     """
-    #     #### Final Output Preview
-    #     1. Decision-first summary with recommended regime and yearly/monthly savings.
-    #     2. Side-by-side New vs Old hero cards for instant comparison.
-    #     3. Compact breakdown table with highlighted decision rows and delta row.
-    #     4. Structured exports (PDF and DOCX) with proper bordered tables for review/share.
-    #     """
-    # )
-
     # ── TAX INSIGHTS ───────────────────────────────────────────
     marginal_relief_message = (
         f"""You crossed <b>₹12L</b> by
@@ -486,7 +439,7 @@ def render():
 
     breakdown_df = _salary_breakdown_df(ctc, result)
 
-    st.markdown("#### Salary Breakdown")
+    st.markdown("#### Salary Breakdown (Compact and Decision-focused)")
     compact_rows = [
         "CTC",
         "Gross Salary",
@@ -496,17 +449,21 @@ def render():
         "Monthly In-Hand",
     ]
     compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True).copy()
-    # delta_row = pd.DataFrame(
-    #     [
-    #         {
-    #             "Component": "Difference (New - Old)",
-    #             "New Regime": format_inr(_parse_inr_amount(compact_df.iloc[-1]["New Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["Old Regime"])),
-    #             "Old Regime": format_inr(_parse_inr_amount(compact_df.iloc[-1]["Old Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["New Regime"])),
-    #         }
-    #     ]
-    # )
-    compact_df = pd.concat([compact_df], ignore_index=True)
-    highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand"}
+    delta_row = pd.DataFrame(
+        [
+            {
+                "Component": "Difference (New - Old)",
+                "New Regime": format_inr(
+                    _parse_inr_amount(compact_df.iloc[-1]["New Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["Old Regime"])
+                ),
+                "Old Regime": format_inr(
+                    _parse_inr_amount(compact_df.iloc[-1]["Old Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["New Regime"])
+                ),
+            }
+        ]
+    )
+    compact_df = pd.concat([compact_df, delta_row], ignore_index=True)
+    highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand", "Difference (New - Old)"}
 
     def _highlight_row(row):
         if row["Component"] in highlight_rows:
@@ -529,7 +486,6 @@ def render():
     comparison_rows = [tuple(row) for row in breakdown_df[["Component", "New Regime", "Old Regime"]].values.tolist()]
 
     document_title = f"Salary Payslip (New vs Old) - CTC {format_inr(ctc)}"
-    doc_filename = f"salary_breakdown_{int(ctc)}.docx"
     pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
 
     earnings_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]]
@@ -538,35 +494,16 @@ def render():
     ]
     summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
 
-    st.markdown("#### Download Payslip")
-    selector_col, guidance_col = st.columns([1.4, 1])
-    with selector_col:
-        st.markdown("**Choose format**")
-        file_type = st.radio(
-            "Download Format",
-            options=["PDF", "DOCX"],
-            horizontal=True,
-            label_visibility="collapsed",
-        )
-        with guidance_col:
-            if file_type == "PDF":
-                file_name = pdf_filename
-                mime = "application/pdf"
-                payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
-                download_label = "Download PDF Payslip"
-            else:
-                file_name = doc_filename
-                mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                payload = _docx_bytes(document_title, payslip, comparison_rows)
-                download_label = "Download DOCX Payslip"
-                
-                st.download_button(
-                    download_label,
-                    data=payload,
-                    file_name=file_name,
-                    mime=mime,
-                    use_container_width=True,
-                )
+    st.markdown("#### Download")
+    st.caption("PDF only")
+    payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
+    st.download_button(
+        "⬇",
+        data=payload,
+        file_name=pdf_filename,
+        mime="application/pdf",
+        help="Download payslip PDF",
+    )
 
     if result["surcharge_new"] > 0:
         st.warning("Surcharge applied — income exceeds ₹50L")
