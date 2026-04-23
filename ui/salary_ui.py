@@ -549,30 +549,24 @@ def render():
             label_visibility="collapsed",
         )
         with guidance_col:
-            # st.markdown("**Format guidance**")
-            # if file_type == "PDF":
-            #     st.caption("Best for quick sharing and print-ready copy.")
-            # else:
-            #     st.caption("Best for edits, comments, and custom formatting.")
+            if file_type == "PDF":
+                file_name = pdf_filename
+                mime = "application/pdf"
+                payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
+                download_label = "Download PDF Payslip"
+            else:
+                file_name = doc_filename
+                mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                payload = _docx_bytes(document_title, payslip, comparison_rows)
+                download_label = "Download DOCX Payslip"
                 
-                if file_type == "PDF":
-                    file_name = pdf_filename
-                    mime = "application/pdf"
-                    payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
-                    download_label = "Download PDF Payslip"
-                else:
-                    file_name = doc_filename
-                    mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    payload = _docx_bytes(document_title, payslip, comparison_rows)
-                    download_label = "Download DOCX Payslip"
-                    
-                    st.download_button(
-                        download_label,
-                        data=payload,
-                        file_name=file_name,
-                        mime=mime,
-                        use_container_width=True,
-                    )
+                st.download_button(
+                    download_label,
+                    data=payload,
+                    file_name=file_name,
+                    mime=mime,
+                    use_container_width=True,
+                )
 
     if result["surcharge_new"] > 0:
         st.warning("Surcharge applied — income exceeds ₹50L")
