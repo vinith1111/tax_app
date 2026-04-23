@@ -8,14 +8,6 @@ from utils.formatter import format_inr, format_lpa, effective_tax_rate
 from validators.input_validator import validate_ctc
 
 
-def _parse_inr_amount(value):
-    clean = str(value).replace("₹", "").replace(",", "").strip()
-    try:
-        return int(float(clean))
-    except ValueError:
-        return 0
-
-
 def _salary_breakdown_df(ctc, result):
     return pd.DataFrame(
         [
@@ -439,7 +431,29 @@ def render():
 
     breakdown_df = _salary_breakdown_df(ctc, result)
 
-    st.markdown("#### Salary Breakdown (Compact and Decision-focused)")
+    payslip = _payslip_data(ctc, result)
+    comparison_rows = [tuple(row) for row in breakdown_df[["Component", "New Regime", "Old Regime"]].values.tolist()]
+    document_title = f"Salary Payslip (New vs Old) - CTC {format_inr(ctc)}"
+    pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
+    earnings_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]]
+    deduction_rows = [
+        (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["deductions"]
+    ]
+    summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
+    pdf_payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
+
+    heading_col, action_col = st.columns([5, 1])
+    with heading_col:
+        st.markdown("#### Salary Breakdown")
+    with action_col:
+        st.download_button(
+            "⬇",
+            data=pdf_payload,
+            file_name=pdf_filename,
+            mime="application/pdf",
+            help="Download payslip PDF",
+        )
+
     compact_rows = [
         "CTC",
         "Gross Salary",
@@ -448,62 +462,8 @@ def render():
         "Annual In-Hand",
         "Monthly In-Hand",
     ]
-    compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True).copy()
-    delta_row = pd.DataFrame(
-        [
-            {
-                "Component": "Difference (New - Old)",
-                "New Regime": format_inr(
-                    _parse_inr_amount(compact_df.iloc[-1]["New Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["Old Regime"])
-                ),
-                "Old Regime": format_inr(
-                    _parse_inr_amount(compact_df.iloc[-1]["Old Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["New Regime"])
-                ),
-            }
-        ]
-    )
-    compact_df = pd.concat([compact_df, delta_row], ignore_index=True)
-    highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand", "Difference (New - Old)"}
-
-    def _highlight_row(row):
-        if row["Component"] in highlight_rows:
-            return ["background-color: #172554; color: #e5e7eb; font-weight: 600"] * len(row)
-        return [""] * len(row)
-
-    st.table(compact_df.style.apply(_highlight_row, axis=1))
-
-    with st.expander("Assumptions used for this estimate"):
-        st.markdown(
-            """
-            - Basic salary assumed at 50% of CTC.
-            - Employer and employee PF derived from annual basic.
-            - Professional tax is fixed at ₹2,400 annually.
-            - New vs old regime taxable income and tax slabs are computed by service logic.
-            - Marginal relief is shown when eligible.
-            """
-        )
-    payslip = _payslip_data(ctc, result)
-    comparison_rows = [tuple(row) for row in breakdown_df[["Component", "New Regime", "Old Regime"]].values.tolist()]
-
-    document_title = f"Salary Payslip (New vs Old) - CTC {format_inr(ctc)}"
-    pdf_filename = f"salary_breakdown_{int(ctc)}.pdf"
-
-    earnings_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["earnings"]]
-    deduction_rows = [
-        (name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["deductions"]
-    ]
-    summary_rows = [(name, format_inr(new_amount), format_inr(old_amount)) for name, new_amount, old_amount in payslip["summary"]]
-
-    st.markdown("#### Download")
-    st.caption("PDF only")
-    payload = _text_pdf_bytes(document_title, payslip, comparison_rows, earnings_rows, deduction_rows, summary_rows)
-    st.download_button(
-        "⬇",
-        data=payload,
-        file_name=pdf_filename,
-        mime="application/pdf",
-        help="Download payslip PDF",
-    )
+    compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True)
+    st.table(compact_df)
 
     if result["surcharge_new"] > 0:
         st.warning("Surcharge applied — income exceeds ₹50L")
