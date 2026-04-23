@@ -334,17 +334,17 @@ def _docx_bytes(title, payslip, comparison_rows):
 def render():
     st.markdown("### Salary Calculator")
     st.caption("Enter your CTC to see exact in-hand salary under both tax regimes.")
-    st.markdown("#### UX Modernization Roadmap (All 4 Phases Applied)")
-    phases_df = pd.DataFrame(
-        [
-            ("Phase 1", "Decision-first layout", "Completed"),
-            ("Phase 2", "Comparison readability", "Completed"),
-            ("Phase 3", "Export document polish", "Completed"),
-            ("Phase 4", "Trust and insights layer", "Completed"),
-        ],
-        columns=["Phase", "Outcome", "Status"],
-    )
-    st.table(phases_df)
+    # st.markdown("#### UX Modernization Roadmap (All 4 Phases Applied)")
+    # phases_df = pd.DataFrame(
+    #     [
+    #         ("Phase 1", "Decision-first layout", "Completed"),
+    #         ("Phase 2", "Comparison readability", "Completed"),
+    #         ("Phase 3", "Export document polish", "Completed"),
+    #         ("Phase 4", "Trust and insights layer", "Completed"),
+    #     ],
+    #     columns=["Phase", "Outcome", "Status"],
+    # )
+    # st.table(phases_df)
 
     ctc = st.number_input(
         "Annual CTC (₹)",
@@ -439,15 +439,15 @@ def render():
     else:
         st.success(f"Old Regime saves you **{format_inr(abs(diff))}** per year ({format_inr(round(abs(diff)/12))}/month)")
 
-    st.markdown(
-        """
-        #### Final Output Preview
-        1. Decision-first summary with recommended regime and yearly/monthly savings.
-        2. Side-by-side New vs Old hero cards for instant comparison.
-        3. Compact breakdown table with highlighted decision rows and delta row.
-        4. Structured exports (PDF and DOCX) with proper bordered tables for review/share.
-        """
-    )
+    # st.markdown(
+    #     """
+    #     #### Final Output Preview
+    #     1. Decision-first summary with recommended regime and yearly/monthly savings.
+    #     2. Side-by-side New vs Old hero cards for instant comparison.
+    #     3. Compact breakdown table with highlighted decision rows and delta row.
+    #     4. Structured exports (PDF and DOCX) with proper bordered tables for review/share.
+    #     """
+    # )
 
     # ── TAX INSIGHTS ───────────────────────────────────────────
     marginal_relief_message = (
@@ -496,17 +496,17 @@ def render():
         "Monthly In-Hand",
     ]
     compact_df = breakdown_df[breakdown_df["Component"].isin(compact_rows)].reset_index(drop=True).copy()
-    delta_row = pd.DataFrame(
-        [
-            {
-                "Component": "Difference (New - Old)",
-                "New Regime": format_inr(_parse_inr_amount(compact_df.iloc[-1]["New Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["Old Regime"])),
-                "Old Regime": "Reference",
-            }
-        ]
-    )
+    # delta_row = pd.DataFrame(
+    #     [
+    #         {
+    #             "Component": "Difference (New - Old)",
+    #             "New Regime": format_inr(_parse_inr_amount(compact_df.iloc[-1]["New Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["Old Regime"])),
+    #             "Old Regime": format_inr(_parse_inr_amount(compact_df.iloc[-1]["Old Regime"]) - _parse_inr_amount(compact_df.iloc[-1]["New Regime"])),
+    #         }
+    #     ]
+    # )
     compact_df = pd.concat([compact_df, delta_row], ignore_index=True)
-    highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand", "Difference (New - Old)"}
+    highlight_rows = {"Total Tax", "Annual In-Hand", "Monthly In-Hand"}
 
     def _highlight_row(row):
         if row["Component"] in highlight_rows:
