@@ -374,28 +374,28 @@ def render():
 
     # ── MONTHLY IN-HAND HERO ────────────────────────────────────
     # st.markdown("---")
-    st.markdown(
-        f"""
-        <div style="
-            background:#111827;
-            border:1px solid #1f2937;
-            border-radius:12px;
-            padding:12px 14px;
-            margin-bottom:12px;
-        ">
-            <div style="font-size:13px; color:#9ca3af;">Recommendation Summary</div>
-            <div style="font-size:16px; color:#e5e7eb; margin-top:4px;">
-                <b>{winner_label}</b> is better by
-                <span style="color:#22c55e;">{format_inr(diff_abs)}/year</span>
-                (<span style="color:#22c55e;">{format_inr(round(diff_abs / 12))}/month</span>).
-            </div>
-            <div style="font-size:12px; color:#9ca3af; margin-top:6px;">
-                {"Outcome is near-neutral. Choose based on deduction flexibility and filing preference." if near_neutral else "Recommendation based on maximum annual and monthly in-hand value."}
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    # st.markdown(
+    #     f"""
+    #     <div style="
+    #         background:#111827;
+    #         border:1px solid #1f2937;
+    #         border-radius:12px;
+    #         padding:12px 14px;
+    #         margin-bottom:12px;
+    #     ">
+    #         <div style="font-size:13px; color:#9ca3af;">Recommendation Summary</div>
+    #         <div style="font-size:16px; color:#e5e7eb; margin-top:4px;">
+    #             <b>{winner_label}</b> is better by
+    #             <span style="color:#22c55e;">{format_inr(diff_abs)}/year</span>
+    #             (<span style="color:#22c55e;">{format_inr(round(diff_abs / 12))}/month</span>).
+    #         </div>
+    #         <div style="font-size:12px; color:#9ca3af; margin-top:6px;">
+    #             {"Outcome is near-neutral. Choose based on deduction flexibility and filing preference." if near_neutral else "Recommendation based on maximum annual and monthly in-hand value."}
+    #         </div>
+    #     </div>
+    #     """,
+    #     unsafe_allow_html=True,
+    # )
 
     hero_col1, hero_col2 = st.columns(2)
 
@@ -549,11 +549,11 @@ def render():
             label_visibility="collapsed",
         )
         with guidance_col:
-            st.markdown("**Format guidance**")
-            if file_type == "PDF":
-                st.caption("Best for quick sharing and print-ready copy.")
-            else:
-                st.caption("Best for edits, comments, and custom formatting.")
+            # st.markdown("**Format guidance**")
+            # if file_type == "PDF":
+            #     st.caption("Best for quick sharing and print-ready copy.")
+            # else:
+            #     st.caption("Best for edits, comments, and custom formatting.")
                 
                 if file_type == "PDF":
                     file_name = pdf_filename
