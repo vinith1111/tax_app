@@ -398,7 +398,7 @@ def render():
     # ── TAX INSIGHTS ───────────────────────────────────────────
     marginal_relief_message = (
         f"""You crossed <b>₹12L</b> by
-        <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span><br>
+        <span style="color:#22c55e;">{format_inr(result['excess_income'])}</span>
         Tax reduced by
         <span style="color:#22c55e;">{format_inr(result['marginal_relief_savings'])}</span>"""
         if result["marginal_relief_savings"] > 0
